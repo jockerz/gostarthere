@@ -1,0 +1,15 @@
+.env
+.git
+.gitignore
+.air.toml
+.zed/
+tmp/
+media/
+*.db
+*.db-journal
+*.db-wal
+asynqmon
+docs/
+NOTE.md
+README.md
+AGENTS.md
