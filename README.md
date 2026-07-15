@@ -1,6 +1,6 @@
 # Go Start Here
 
-Warning: this repository in highly development mode
+> ⚠️ **This project is under heavy development.** Breaking changes may occur without notice. Use at your own risk in production environments.
 
 ## About
 

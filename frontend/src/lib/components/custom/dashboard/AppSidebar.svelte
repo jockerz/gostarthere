@@ -9,35 +9,6 @@
 
     let { open, onClose }: Props = $props();
 
-    const menuItems = [
-        {
-            title: "Dashboard",
-            url: "/app",
-            icon: LayoutDashboard,
-        },
-    ];
-    const menuSettingItems = [
-        {
-            title: "Profile",
-            url: "/app/profile",
-            icon: User,
-        },
-        {
-            title: "Email",
-            url: "/app/email",
-            icon: Mail,
-        },
-        {
-            title: "Authentication",
-            url: "/app/authentication",
-            icon: Lock,
-        },
-        // {
-        //     title: "Settings",
-        //     url: "/app/settings",
-        //     icon: Settings,
-        // },
-    ];
     const menu = [
         {
             title: "Dashboard",
@@ -128,45 +99,6 @@
                 </Sidebar.GroupContent>
             </Sidebar.Group>
         {/each}
-        <!--
-        <Sidebar.Group>
-            <Sidebar.GroupContent>
-                <Sidebar.Menu>
-                    {#each menuItems as item (item.title)}
-                        <Sidebar.MenuItem>
-                            <Sidebar.MenuButton>
-                                {#snippet child({ props })}
-                                    <a href={item.url} {...props}>
-                                        <item.icon />
-                                        <span>{item.title}</span>
-                                    </a>
-                                {/snippet}
-                            </Sidebar.MenuButton>
-                        </Sidebar.MenuItem>
-                    {/each}
-                </Sidebar.Menu>
-            </Sidebar.GroupContent>
-        </Sidebar.Group>
-        <Sidebar.Group>
-            <Sidebar.GroupLabel>Settings</Sidebar.GroupLabel>
-            <Sidebar.GroupContent>
-                <Sidebar.Menu>
-                    {#each menuSettingItems as item (item.title)}
-                        <Sidebar.MenuItem>
-                            <Sidebar.MenuButton>
-                                {#snippet child({ props })}
-                                    <a href={item.url} {...props}>
-                                        <item.icon />
-                                        <span>{item.title}</span>
-                                    </a>
-                                {/snippet}
-                            </Sidebar.MenuButton>
-                        </Sidebar.MenuItem>
-                    {/each}
-                </Sidebar.Menu>
-            </Sidebar.GroupContent>
-        </Sidebar.Group>
-         -->
     </Sidebar.Content>
     <Sidebar.Footer class="border-sidebar-border border-t">
         <a

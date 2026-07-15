@@ -94,16 +94,24 @@
     async function handleLinkProvider(provider: string) {
       const { generatePKCEChallenge, storeVerifier } = await import("$lib/services/oauth");
       let url: string;
-      if (provider === "google") {
-        const { verifier, challenge } = await generatePKCEChallenge();
-        storeVerifier(verifier);
-        const res = await authApi.oauthAuthorize(provider, challenge);
-        url = res.url;
-      } else {
-        const res = await authApi.oauthAuthorize(provider);
-        url = res.url;
+
+      try {
+        if (provider === "google") {
+          const { verifier, challenge } = await generatePKCEChallenge();
+          storeVerifier(verifier);
+          const res = await authApi.oauthAuthorize(provider, challenge);
+          url = res.url;
+        } else {
+          const res = await authApi.oauthAuthorize(provider);
+          url = res.url;
+        }
+        window.location.href = url;
+      } catch(e) {
+        const error = e as {title: string; detail: string;}
+        dialogTitle = "Authentication Failed"
+        dialogMessage = error.detail;
+        dialogOpen = true;
       }
-      window.location.href = url;
     }
 </script>
 
