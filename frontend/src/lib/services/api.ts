@@ -87,8 +87,9 @@ export async function apiCall<T = SuccessBody>(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  console.log(`API call to ${PUBLIC_API_URL}${endpoint}`, json ?? "formData");
-  const response = await fetch(`${PUBLIC_API_URL}${endpoint}`, {
+  const baseUrl = PUBLIC_API_URL || "";
+  console.log(`API call to ${baseUrl || "/"}${endpoint}`, json ?? "formData");
+  const response = await fetch(`${baseUrl}${endpoint}`, {
     method,
     headers,
     body: json ? JSON.stringify(json) : formData ?? undefined,

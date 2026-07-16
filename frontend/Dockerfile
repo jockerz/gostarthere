@@ -5,13 +5,18 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-COPY ./frontend /app/frontend
+COPY . .
 RUN npm run build
 
 FROM nginx:stable-alpine AS runner
 
-COPY --from=builder /app/frontend /usr/share/nginx/html
+RUN apk add --no-cache gettext
+
+COPY --from=builder /app/build /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["./entrypoint.sh"]
