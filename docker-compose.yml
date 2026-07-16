@@ -72,8 +72,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    environment:
-      - PUBLIC_API_URL=/api
+      args:
+        PUBLIC_API_URL: /api
     depends_on:
       - backend
     labels:
