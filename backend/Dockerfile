@@ -12,15 +12,16 @@ RUN CGO_ENABLED=1 go build -o main main.go
 
 FROM alpine:3.21
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata bash postgresql-dev
 
 WORKDIR /app
 
 COPY --from=builder /app/main .
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
 
 EXPOSE 8080
 
 VOLUME /app/media
 
-ENTRYPOINT ["/app/main"]
-CMD ["api"]
+ENTRYPOINT ["./entrypoint.sh"]
