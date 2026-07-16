@@ -3,8 +3,10 @@ package database
 import (
 	"log"
 	"os"
+	"strings"
 	"time"
 
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -14,16 +16,22 @@ var DB *gorm.DB
 
 func Connect(url string) {
 	newLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
+		log.New(os.Stdout, "\r\n", log.LstdFlags),
 		logger.Config{
-			SlowThreshold: time.Microsecond, // Slow SQL threshold
-			LogLevel:      logger.Info,      // Log level
-			// IgnoreRecordNotFoundError: true,          // Ignore ErrRecordNotFound error for logger
-			// ParameterizedQueries:      true,          // Don't include params in the SQL log
-			Colorful: false, // Disable color
+			SlowThreshold: time.Microsecond,
+			LogLevel:      logger.Info,
+			Colorful:      false,
 		},
 	)
-	_db, err := gorm.Open(sqlite.Open(url), &gorm.Config{
+
+	var dialector gorm.Dialector
+	if strings.HasPrefix(url, "postgres://") || strings.HasPrefix(url, "postgresql://") {
+		dialector = postgres.Open(url)
+	} else {
+		dialector = sqlite.Open(url)
+	}
+
+	_db, err := gorm.Open(dialector, &gorm.Config{
 		Logger: newLogger,
 	})
 	if err != nil {

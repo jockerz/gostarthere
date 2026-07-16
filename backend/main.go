@@ -63,7 +63,7 @@ func runApi(cmd *cobra.Command, args []string) {
 	config := internal.NewConfig()
 	api := api.NewApi(config)
 
-	log.Fatal(api.Listen("127.0.0.1:8080", fiber.ListenConfig{
+	log.Fatal(api.Listen("0.0.0.0:8080", fiber.ListenConfig{
 		EnablePrefork: !config.Debug,
 	}))
 }
