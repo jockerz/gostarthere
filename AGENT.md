@@ -6,7 +6,7 @@ Fullstack web application: **Go (Fiber + Huma)** backend, **Svelte 5 (SvelteKit 
 
 | | Backend | Frontend |
 |---|---|---|
-| **Stack** | Go 1.25, Fiber v3, Huma v2, GORM (SQLite), asynq (Redis) | SvelteKit 2, Svelte 5 (runes), Tailwind v4, shadcn-svelte, Vite 8 |
+| **Stack** | Go 1.25, Fiber v3, Huma v2, GORM (SQLite/PostgreSQL), asynq (Redis) | SvelteKit 2, Svelte 5 (runes), Tailwind v4, shadcn-svelte, Vite 8 |
 | **Entry** | `backend/main.go` | `frontend/src/routes/` |
 | **Dev** | `make run` (hot-reload via air) | `npm run dev` |
 | **Build** | `make build` | `npm run build` |
@@ -132,13 +132,6 @@ Key variables: `SECRET`, `DB_URL`, `REDIS_HOST/PORT/DB/PASS`, `SMTP_HOST/PORT`, 
 ### Frontend
 
 - No test framework configured; run `npm run check` for type checking
-
-## Docker
-
-- **Backend:** multi-stage `golang:1.25-alpine` → `alpine:3.21`, CGO_ENABLED=1, exposes `8080`
-- **Frontend:** multi-stage `node:22-alpine` → `nginx:stable-alpine`, serves static SPA, exposes `80`
-- **Compose:** `docker-compose.yml` (local dev) + `docker-compose.prod.yml` (production override)
-- **Services:** Traefik reverse proxy, PostgreSQL 17, Redis 7
 
 ## Agent Rules
 
