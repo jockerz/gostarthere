@@ -17,6 +17,10 @@ Fullstack web application: **Go (Fiber + Huma)** backend, **Svelte 5 (SvelteKit 
 
 ## Docker
 
+### Setup
+1. Copy `.env.example` to `.env` and set `POSTGRES_PASSWORD` and `REDIS_PASSWORD`
+2. Copy `backend/.env.docker.example` to `backend/.env.docker` and configure
+
 ### Local Development
 ```bash
 docker compose up -d              # Start all services

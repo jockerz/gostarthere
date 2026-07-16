@@ -1,7 +1,11 @@
 .env
+.env.*
+!.env.docker.example
 .git
 .gitignore
 .air.toml
+.vscode/
+.idea/
 .zed/
 tmp/
 media/
@@ -13,3 +17,7 @@ docs/
 NOTE.md
 README.md
 AGENTS.md
+AGENT.md
+LICENSE
+*_test.go
+testdata/

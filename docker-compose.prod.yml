@@ -7,7 +7,7 @@ services:
       - --entryPoints.web.address=:80
       - --entryPoints.websecure.address=:443
       - --certificatesResolvers.letsencrypt.acme.httpChallenge.entryPoint=web
-      - --certificatesResolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@example.com}
+      - --certificatesResolvers.letsencrypt.acme.email=${ACME_EMAIL:?Set ACME_EMAIL in .env}
       - --certificatesResolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
     ports:
       - "80:80"

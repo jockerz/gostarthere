@@ -6,6 +6,9 @@ build
 .env
 .env.*
 !.env.example
+.vscode/
+.idea/
 NOTE.md
 docs
 *.md
+LICENSE
