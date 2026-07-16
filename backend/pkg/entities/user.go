@@ -13,8 +13,8 @@ type User struct {
 
 	CreatedBy uint
 	UpdatedBy uint
-	CreatedAt time.Time `gorm:"not null;type:datetime" json:"created_at"`
-	UpdatedAt time.Time `gorm:"type:datetime" json:"updated_at"`
+	CreatedAt time.Time `gorm:"not null" json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (User) TableName() string {

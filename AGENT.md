@@ -29,7 +29,7 @@ docker compose down               # Stop all services
 docker compose down -v            # Stop and remove volumes (resets DB)
 ```
 
-Services: Frontend (`http://localhost`), API (`http://localhost/api/v1/...`), Traefik Dashboard (`http://localhost:8081`)
+Services: Frontend (`http://localhost:8080`), API (`http://localhost:8080/api/v1/...`), Traefik Dashboard (`http://localhost:8081`)
 
 ### Production
 ```bash

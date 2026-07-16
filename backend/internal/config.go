@@ -12,7 +12,8 @@ import (
 func LoadEnv() {
 	err := godotenv.Load(".env")
 	if err != nil {
-		panic(err)
+		// .env file is optional — environment variables may be set via Docker env_file or system env
+		return
 	}
 }
 
@@ -67,7 +68,7 @@ func NewConfig() *Config {
 	}
 
 	redisPort := 6379
-	redisPortStr, found := os.LookupEnv("REDIS_HOST")
+	redisPortStr, found := os.LookupEnv("REDIS_PORT")
 	if found {
 		redisPort, _ = strconv.Atoi(redisPortStr)
 	}

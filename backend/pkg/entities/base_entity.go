@@ -6,6 +6,6 @@ import "time"
 type BaseModel struct {
 	CreatedBy uint
 	UpdatedBy uint
-	CreatedAt time.Time `gorm:"type:datetime" json:"created_at"`
-	UpdatedAt time.Time `gorm:"type:datetime" json:"updated_at"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }

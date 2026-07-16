@@ -34,17 +34,17 @@ type BearerToken struct {
 
 // Token for authentication
 type AuthToken struct {
-	ID               uint       `gorm:"primaryKey"`
-	UserID           uint       `gorm:"index;not null"`
-	Prefix           string     `gorm:"uniqueIndex;not null;size:48"`
-	Secret           string     `gorm:"not null;size:127"`
-	RefreshSecret    string     `gorm:"size:127"`
-	ExpiresAt        time.Time  `gorm:"not nulltype:datetime"`
-	RefreshedAt      time.Time  `gorm:"type:datetime"`
-	RefreshExpiresAt time.Time  `gorm:"type:datetime"`
-	IsRevoked        bool       `gorm:"not null;default:false"`
-	RevokedAt        *time.Time `gorm:"type:datetime"`
-	CreatedAt        time.Time  `gorm:"type:datetime" json:"created_at"`
+	ID               uint      `gorm:"primaryKey"`
+	UserID           uint      `gorm:"index;not null"`
+	Prefix           string    `gorm:"uniqueIndex;not null;size:48"`
+	Secret           string    `gorm:"not null;size:127"`
+	RefreshSecret    string    `gorm:"size:127"`
+	ExpiresAt        time.Time `gorm:"not null"`
+	RefreshedAt      time.Time
+	RefreshExpiresAt time.Time
+	IsRevoked        bool `gorm:"not null;default:false"`
+	RevokedAt        *time.Time
+	CreatedAt        time.Time `json:"created_at"`
 	CreatedBy        uint
 }
 
@@ -129,15 +129,15 @@ type UserToken struct {
 	RefreshSecret string        `gorm:"size:127"`
 	Type          UserTokenType `gorm:"index;size:50;not null"`
 	// NewEmail         string        `gorm:"size:255"`
-	Data             string     `gorm:"size:255"`
-	ExpiresAt        time.Time  `gorm:"not null"`
-	RefreshedAt      time.Time  `gorm:"type:datetime"`
-	RefreshExpiresAt time.Time  `gorm:"type:datetime"`
-	IsUsed           bool       `gorm:"index;default:false"`
-	UsedAt           *time.Time `gorm:"type:datetime"`
-	IsRevoked        bool       `gorm:"not null;default:false"`
-	RevokedAt        *time.Time `gorm:"type:datetime"`
-	CreatedAt        time.Time  `gorm:"type:datetime" json:"created_at"`
+	Data             string    `gorm:"size:255"`
+	ExpiresAt        time.Time `gorm:"not null"`
+	RefreshedAt      time.Time
+	RefreshExpiresAt time.Time
+	IsUsed           bool `gorm:"index;default:false"`
+	UsedAt           *time.Time
+	IsRevoked        bool `gorm:"not null;default:false"`
+	RevokedAt        *time.Time
+	CreatedAt        time.Time `json:"created_at"`
 	CreatedBy        uint
 }
 
