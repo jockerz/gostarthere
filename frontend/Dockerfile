@@ -10,7 +10,7 @@ RUN npm run build
 
 FROM nginx:stable-alpine AS runner
 
-RUN apk add --no-cache gettext
+WORKDIR /
 
 COPY --from=builder /app/build /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf

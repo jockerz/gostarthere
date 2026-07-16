@@ -8,6 +8,7 @@
     import NotificationDialog from "$lib/components/custom/NotificationDialog.svelte";
     import { onMount } from "svelte";
     import { PUBLIC_API_URL } from "$env/static/public";
+    const mediaBase = PUBLIC_API_URL || "";
 
     let name = $state("");
     let username = $state("");
@@ -128,7 +129,7 @@
                     <Avatar.Root class="size-32">
                         {#if avatar}
                             <Avatar.Image
-                                src={PUBLIC_API_URL + "/media/" + avatar}
+                                src={mediaBase + "/media/" + avatar}
                                 alt={name}
                             />
                         {/if}
