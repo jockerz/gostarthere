@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { DASHBOARD_PATH } from "$lib/const";
     import { Button } from "$lib/components/ui/button";
     import { Input } from "$lib/components/ui/input";
     import { Label } from "$lib/components/ui/label";
@@ -68,7 +69,7 @@
                 dialogOpen = true;
 
                 await new Promise((resolve) => setTimeout(resolve, 3000));
-                goto("/dashboard");
+                goto(DASHBOARD_PATH);
             } else {
                 dialogMessage = result.message;
                 dialogOpen = true;
