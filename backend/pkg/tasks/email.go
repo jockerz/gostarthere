@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/hibiken/asynq"
+	"github.com/rs/zerolog/log"
 )
 
 type SendEmailPayload struct {
@@ -13,6 +13,13 @@ type SendEmailPayload struct {
 	Recipient string `json:"recipient"`
 	Subject   string `json:"subject"`
 	Message   string `json:"message"`
+}
+
+func (payload *SendEmailPayload) toJsonLog() []byte {
+	data := payload.toLog()
+	jsonBytes, _ := json.Marshal(data)
+	return jsonBytes
+
 }
 
 func (payload *SendEmailPayload) toLog() SendEmailPayload {
@@ -33,10 +40,10 @@ func SendEmailTasks(ctx context.Context, from, to, subject, message string) (*as
 	}
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		log.Errorf("New SendEmailTasks %v", err)
+		log.Error().AnErr("SendEmailTasks", err)
 		return nil, err
 	} else {
-		log.Infof("task Payload: %+v", payload.toLog())
+		log.Info().Str("task", "SendEmailTasks").RawJSON("payload", payload.toJsonLog())
 	}
 	return asynq.NewTask(TypeAuthEmail, jsonPayload), nil
 }

@@ -109,11 +109,7 @@ func (s *service) BuildAuthorizeURL(ctx context.Context, provider, codeChallenge
 }
 
 func (s *service) HandleCallback(ctx context.Context, provider string, code string, state string, codeVerifier string, authUserID *uint) (string, string, *entities.User, bool, error) {
-	fmt.Printf("[HandleCallback] state=%s provider=%s code=%s codeVerifier=%s userid=%d\n", state, provider, code, codeVerifier, authUserID)
-	fmt.Printf("%v\n", s.stateStore.store)
-
 	entry := s.stateStore.Consume(state)
-	fmt.Printf("entry: %v\n", entry)
 	if entry == nil {
 		return "", "", nil, false, ErrInvalidState
 	}
@@ -150,14 +146,12 @@ func (s *service) HandleCallback(ctx context.Context, provider string, code stri
 	case "github":
 		var tokenResp *githubTokenResponse
 		tokenResp, err = s.exchangeGitHubCode(ctx, code)
-		fmt.Printf("[github::tokenResp] resp=%#v err=%v\n", tokenResp, err)
 		if err != nil {
 			return "", "", nil, false, err
 		}
 
 		var userInfo *githubUserInfo
 		userInfo, err = s.fetchGitHubUserInfo(ctx, tokenResp.AccessToken)
-		fmt.Printf("[github::userInfo] resp=%#v err=%v\n", userInfo, err)
 		if err != nil {
 			return "", "", nil, false, err
 		}

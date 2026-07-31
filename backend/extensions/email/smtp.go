@@ -3,15 +3,17 @@ package email
 import (
 	"crypto/tls"
 	"fmt"
-	"log"
 	"net/smtp"
+
+	"github.com/rs/zerolog/log"
+
 	"vnti/internal"
 )
 
 var Smtp *smtp.Client
 
 func New(config *internal.Config) (*smtp.Client, error) {
-	log.Println("SMTP starts")
+	log.Debug().Msg("SMTP starts")
 
 	smtpClient, err := smtp.Dial(config.SMTPAddress())
 	if err != nil {
@@ -33,7 +35,7 @@ func New(config *internal.Config) (*smtp.Client, error) {
 		}
 	}
 
-	log.Println("SMTP is ready")
+	log.Debug().Msg("SMTP is ready")
 
 	return smtpClient, nil
 }

@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/smtp"
 	"vnti/extensions/email"
+	"vnti/extensions/logger"
 	"vnti/pkg/tasks"
 
 	"github.com/hibiken/asynq"
@@ -27,11 +27,11 @@ func HanderSendAuthEmail(smtpClient *smtp.Client) func(ctx context.Context, t *a
 		if err := json.Unmarshal(t.Payload(), &payload); err != nil {
 			return err
 		}
-		log.Printf("Processing the email %s\n", t.Payload())
+		logger.Logger.Info().Msg(fmt.Sprintf("Processing the email %s\n", t.Payload()))
 
 		message := writeMessage(payload.From, payload.Recipient, payload.Subject, payload.Message)
 		if err := email.SendEmail(smtpClient, payload.From, payload.Recipient, message); err != nil {
-			log.Printf("Error handler=HanderSendAuthEmail %v", err)
+			logger.Logger.Info().Msg(fmt.Sprintf("Error handler=HanderSendAuthEmail %v", err))
 		}
 		return nil
 	}

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 	"strings"
 	"vnti/apps/api"
@@ -10,6 +9,7 @@ import (
 	"vnti/internal"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -63,7 +63,7 @@ func runApi(cmd *cobra.Command, args []string) {
 	config := internal.NewConfig()
 	api := api.NewApi(config)
 
-	log.Fatal(api.Listen("0.0.0.0:8080", fiber.ListenConfig{
+	log.Fatal().AnErr("API", api.Listen("0.0.0.0:8080", fiber.ListenConfig{
 		EnablePrefork: !config.Debug,
 	}))
 }
@@ -71,9 +71,7 @@ func runApi(cmd *cobra.Command, args []string) {
 func runWorker(cmd *cobra.Command, args []string) {
 	config := internal.NewConfig()
 	worker := workers.New(config)
-	if err := workerHandlers.Run(worker); err != nil {
-		log.Fatal(err)
-	}
+	log.Fatal().AnErr("Worker", workerHandlers.Run(worker))
 }
 
 func main() {

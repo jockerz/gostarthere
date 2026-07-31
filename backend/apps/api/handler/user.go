@@ -3,10 +3,10 @@ package handler
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/rs/zerolog/log"
 
 	"vnti/apps/api/middleware"
 	"vnti/apps/api/presenter"
@@ -30,7 +30,7 @@ func GetProfile(svc user.Service) func(context.Context, *schema.GetProfileInput)
 func UpdateProfile(svc user.Service) func(context.Context, *schema.UpdateProfileInput) (*presenter.SuccessResponse, error) {
 	return func(ctx context.Context, input *schema.UpdateProfileInput) (*presenter.SuccessResponse, error) {
 		current_user := ctx.Value(middleware.CtxUserKey).(*entities.User)
-		fmt.Printf("Update profile: user: %v input: %v", current_user, input)
+		log.Info().Any("user", current_user).Any("input", input).Msg("Update profile")
 
 		return &presenter.SuccessResponse{Body: presenter.SuccessBody{
 			Success: true,

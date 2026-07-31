@@ -3,9 +3,9 @@ package handler
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/rs/zerolog/log"
 
 	"vnti/apps/api/middleware"
 	"vnti/apps/api/presenter"
@@ -93,8 +93,8 @@ func Register(svc auth.Service) func(context.Context, *schema.RegisterInput) (*p
 			}
 			return nil, huma.Error422UnprocessableEntity(err.Error())
 		}
-		// TODO: log
-		fmt.Printf("New user registered: %v\n", user)
+		log.Debug().Any("user", user).Msg("New user registered")
+
 		return &presenter.SuccessResponse{Body: presenter.SuccessBody{
 			Success: true,
 			Message: "Registration successful",

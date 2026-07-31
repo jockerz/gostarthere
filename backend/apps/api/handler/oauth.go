@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/golang-jwt/jwt/v5"
@@ -23,7 +22,6 @@ const bearerPrefix = "Bearer "
 func OAuthAuthorize(config *internal.Config, svc oauth2.Service, authSvc auth.Service) func(context.Context, *schema.OAuthAuthorizeInput) (*schema.OAuthAuthorizeOutput, error) {
 	return func(ctx context.Context, input *schema.OAuthAuthorizeInput) (*schema.OAuthAuthorizeOutput, error) {
 		var authUserID *uint
-		fmt.Printf("[OAuthAuthorize] input: %v\n", input)
 
 		if input.Authorization != "" {
 			jwtToken, err := parseBearerToken(input.Authorization)
@@ -37,11 +35,7 @@ func OAuthAuthorize(config *internal.Config, svc oauth2.Service, authSvc auth.Se
 			authUserID = &userID
 		}
 
-		fmt.Printf("*authUserID  : %d\n", authUserID)
 		url, state, err := svc.BuildAuthorizeURL(ctx, input.Provider, input.CodeChallenge, authUserID)
-		fmt.Printf("url  : %s\n", url)
-		fmt.Printf("state: %s\n", state)
-		fmt.Printf("err  : %v\n", err)
 		if err != nil {
 			return nil, huma.Error500InternalServerError(err.Error())
 		}

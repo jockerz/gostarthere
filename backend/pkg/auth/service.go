@@ -12,10 +12,10 @@ import (
 	"vnti/pkg/tasks"
 	"vnti/pkg/user"
 
-	"github.com/gofiber/fiber/v3/log"
 	"github.com/gofiber/utils/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/hibiken/asynq"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -262,7 +262,7 @@ func (s *service) Register(ctx context.Context, input *entities.Register) (*enti
 		token.AsTokenWithSecret(token.Secret),
 		user.Email,
 	); err != nil {
-		log.Error(err)
+		log.Error().Err(err)
 	}
 	return user, nil
 }
@@ -329,7 +329,7 @@ func (s *service) ResendActivation(ctx context.Context, email_or_username string
 		token.AsTokenWithSecret(token.Secret),
 		user.Email,
 	); err != nil {
-		log.Error(err)
+		log.Error().Err(err)
 	}
 
 	return nil
@@ -360,7 +360,7 @@ func (s *service) ForgotPassword(ctx context.Context, email_or_username string) 
 		token.AsTokenWithSecret(token.Secret),
 		user.Email,
 	); err != nil {
-		log.Error(err)
+		log.Error().Err(err)
 	}
 
 	return nil
@@ -593,7 +593,8 @@ func (s *service) sendTokenEmail(ctx context.Context, actionType TokenAction, to
 
 	task, err := tasks.SendEmailTasks(ctx, s.config.SMTP_USERNAME, email, subject, message)
 	if err != nil {
-		log.Errorf("Fail to create task %s: %s", tasks.TypeAuthEmail, err.Error())
+		log.Error().Err(err).Str("task_type", tasks.TypeAuthEmail).
+			Msg("Fail to create task")
 		return tasks.ErrTokenActionCreateTask
 	} else if !s.skipTaskQueue {
 		_ = s.EnqueueTask(task, actionType)
@@ -604,9 +605,10 @@ func (s *service) sendTokenEmail(ctx context.Context, actionType TokenAction, to
 
 func (s *service) EnqueueTask(task *asynq.Task, taskType TokenAction) error {
 	taskInfo, err := s.asynqClient.Enqueue(task)
-	fmt.Printf("task queue info: %+v, err: %v\n", taskInfo, err)
+	log.Debug().Any("task_info", taskInfo).Err(err).Send()
 	if err != nil {
-		log.Errorf("Fail to enqueue task %s: %s", taskType, err.Error())
+		log.Error().Str("task_type", string(taskType)).Err(err).
+			Msg("Fail to enqueue task")
 		return tasks.ErrTokenActionEnqueueTask
 	}
 	return nil

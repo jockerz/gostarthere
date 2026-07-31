@@ -2,21 +2,29 @@ package workers
 
 import (
 	"net/smtp"
-	emailExt "vnti/extensions/email"
+	"vnti/extensions/database"
+	"vnti/extensions/email"
+	"vnti/extensions/logger"
 	"vnti/internal"
 
 	"github.com/hibiken/asynq"
+	"gorm.io/gorm"
 )
 
 type AsynqWorker struct {
 	Config *internal.Config
-	Smtp   *smtp.Client
+
+	DB   *gorm.DB
+	Smtp *smtp.Client
 
 	AsynqServer *asynq.Server
 }
 
 func New(config *internal.Config) *AsynqWorker {
-	smtpClient, err := emailExt.New(config)
+	logger.InitLogger("backend", "worker", config.Debug)
+	database.Connect(config.DB_URL)
+
+	smtpClient, err := email.New(config)
 	if err != nil {
 		panic(err)
 	}
@@ -32,6 +40,7 @@ func New(config *internal.Config) *AsynqWorker {
 
 	worker := &AsynqWorker{
 		Config:      config,
+		DB:          database.DB,
 		Smtp:        smtpClient,
 		AsynqServer: srv,
 	}

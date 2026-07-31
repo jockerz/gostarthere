@@ -1,10 +1,7 @@
 package database
 
 import (
-	"log"
-	"os"
 	"strings"
-	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -16,11 +13,12 @@ var DB *gorm.DB
 
 func Connect(url string) {
 	newLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags),
+		// log.New(os.Stdout, "\r\n", log.LstdFlags),
+		nil,
 		logger.Config{
-			SlowThreshold: time.Microsecond,
-			LogLevel:      logger.Info,
-			Colorful:      false,
+			// SlowThreshold: time.Microsecond,
+			// LogLevel:      logger.Info,
+			// Colorful:      false,
 		},
 	)
 

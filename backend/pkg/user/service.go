@@ -13,9 +13,9 @@ import (
 	"vnti/pkg/entities"
 	"vnti/pkg/tasks"
 
-	"github.com/gofiber/fiber/v3/log"
 	"github.com/gofiber/utils/v2"
 	"github.com/hibiken/asynq"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -306,7 +306,7 @@ func (s *service) RequestEmailUpdate(ctx context.Context, userID uint, newEmail 
 		token.AsTokenWithSecret(token.Secret),
 		newEmail,
 	); err != nil {
-		log.Error(err)
+		log.Err(err)
 	}
 	return nil
 }
@@ -366,7 +366,10 @@ func (s *service) sendTokenEmail(ctx context.Context, actionType TokenAction, to
 
 	task, err := tasks.SendEmailTasks(ctx, s.config.SMTP_USERNAME, email, subject, message)
 	if err != nil {
-		log.Errorf("Fail to create task %s: %s", actionType, err.Error())
+		log.Error().
+			Str("action_type", string(actionType)).
+			Errs("err", []error{err}).
+			Msg("Fail to create task")
 		return tasks.ErrTokenActionCreateTask
 	} else if !s.skipTaskQueue {
 		_ = s.EnqueueTask(task, actionType)
@@ -376,9 +379,13 @@ func (s *service) sendTokenEmail(ctx context.Context, actionType TokenAction, to
 
 func (s *service) EnqueueTask(task *asynq.Task, taskType TokenAction) error {
 	taskInfo, err := s.asynqClient.Enqueue(task)
-	fmt.Printf("task queue info: %+v, err: %v\n", taskInfo, err)
+	log.Info().Any("task_info", taskInfo).Errs("error", []error{err})
+
 	if err != nil {
-		log.Errorf("Fail to enqueue task %s: %s", taskType, err.Error())
+		log.Error().
+			Str("action_type", "enqueue_task").
+			Errs("err", []error{err}).
+			Msg("Fail to enqueue task")
 		return tasks.ErrTokenActionEnqueueTask
 	}
 	return nil

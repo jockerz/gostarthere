@@ -3,8 +3,8 @@ package tasks
 import (
 	"fmt"
 
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/hibiken/asynq"
+	"github.com/rs/zerolog/log"
 )
 
 type AsService struct {
@@ -13,9 +13,10 @@ type AsService struct {
 
 func (s *AsService) EnqueueTask(task *asynq.Task) error {
 	taskInfo, err := s.asynqClient.Enqueue(task)
-	fmt.Printf("task queue info: %+v, err: %v\n", taskInfo, err)
+
+	log.Info().Msg(fmt.Sprintf("task queue info: %+v, err: %v\n", taskInfo, err))
 	if err != nil {
-		log.Errorf("Fail to enqueue task %s: %s", TypeAuthEmail, err.Error())
+		log.Error().Msg(fmt.Sprintf("Fail to enqueue task %s: %s", TypeAuthEmail, err.Error()))
 		return ErrTokenActionEnqueueTask
 	}
 	return nil
