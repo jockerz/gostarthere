@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime/debug"
-	"vnti/extensions/logger"
+	"vnti/internal/logger"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -20,26 +20,25 @@ func ErrorHandler(ctx fiber.Ctx, err error) error {
 		message = e.Message
 	}
 
-	logCtx := logger.APILogMessage(ctx, &logger.Logger, "", "")
-	log := logCtx.Logger()
-	log.Error().Msg(fmt.Sprintf("%d:%s", code, message))
+	l := logger.LogContext(ctx, "", "error")
+	l.Err(e).Msg(fmt.Sprintf("%d:%s", code, message))
 
-	err = ctx.Status(code).JSON(map[string]any{
+	return ctx.Status(code).JSON(map[string]any{
 		"success": false,
 		"error":   message,
 	})
-	return nil
 }
 
 func PanicHander(ctx fiber.Ctx, e any) error {
-	logCtx := logger.APILogMessage(ctx, &logger.Logger, "", "")
-
-	log := logCtx.Logger()
-	log.Error().Msg(string(debug.Stack()))
+	l := logger.LogContext(ctx, "", "panic")
+	l.Error().Msg(string(debug.Stack()))
 
 	// Error to be handled by ErrorHandler
 	if err, ok := e.(error); ok {
+		l.Err(err).Msg(string(debug.Stack()))
 		return err
+	} else {
+		l.Error().Msg(string(debug.Stack()))
 	}
-	return errors.New("Internal server error")
+	return fiber.ErrInternalServerError
 }

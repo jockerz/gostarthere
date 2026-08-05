@@ -9,40 +9,60 @@ import (
 
 	"github.com/gofiber/fiber/v3/middleware/requestid"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
-var AccessLogger, Logger zerolog.Logger
+var AccessLogger zerolog.Logger
 
-func InitLogger(appName, logType string, isDebug bool, extra ...string) {
-	var output zerolog.ConsoleWriter
+const (
+	accessLogAppName = "BACKEND"
+)
+
+func InitLogger(appName, logType string, isDebug bool) {
+	var logger zerolog.Logger
 
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	if isDebug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		output = zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.DateTime}
+		output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.DateTime}
 		output.FormatLevel = func(i any) string {
 			return strings.ToUpper(fmt.Sprintf("| %-6s|", i))
 		}
+		logger = zerolog.New(output)
 	} else {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-		output = zerolog.ConsoleWriter{Out: os.Stdout}
+		logger = zerolog.New(os.Stdout)
 	}
-	Logger = zerolog.New(output).With().
+
+	log.Logger = logger.With().
 		Timestamp().
 		Str("log_app", appName).
 		Str("log_type", logType).
 		Logger()
-	AccessLogger = zerolog.New(output).With().
-		Timestamp().
-		Str("log_app", appName).
-		Str("log_type", "ACCESS").
+}
+
+func InitAccessLogger(isDebug bool) {
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	if isDebug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.DateTime}
+		output.FormatLevel = func(i any) string {
+			return strings.ToUpper(fmt.Sprintf("| %-6s|", i))
+		}
+		AccessLogger = zerolog.New(output)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		AccessLogger = zerolog.New(os.Stdout)
+	}
+	AccessLogger = AccessLogger.With().
+		Timestamp().Str("log_app", accessLogAppName).Str("log_type", "ACCESS").
 		Logger()
 }
 
-func APILogMessage(ctx context.Context, logger *zerolog.Logger, event, namespace string, data ...any) zerolog.Context {
+func APILogMessage(ctx context.Context, event, namespace string, data ...any) zerolog.Context {
 	requestId := requestid.FromContext(ctx)
 
-	logCtx := logger.With().Str("r", requestId)
+	logCtx := log.Logger.With().Str("r", requestId)
 	if event != "" {
 		logCtx = logCtx.Str("event", event)
 	}
@@ -50,7 +70,7 @@ func APILogMessage(ctx context.Context, logger *zerolog.Logger, event, namespace
 		logCtx = logCtx.Str("ns", namespace)
 	}
 	if len(data) > 0 {
-		logger.With().Any("data", data[0])
+		logCtx.Any("data", data[0])
 	}
 
 	return logCtx

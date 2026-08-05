@@ -76,7 +76,6 @@ func runWorker(cmd *cobra.Command, args []string) {
 
 func main() {
 	preparationCheck()
-
 	if err := rootCmd.Execute(); err != nil {
 		panic(err)
 	}

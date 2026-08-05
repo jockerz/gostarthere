@@ -3,17 +3,12 @@ package handler
 import (
 	"context"
 	"vnti/apps/api/presenter"
-	"vnti/extensions/logger"
-	// "github.com/rs/zerolog/log"
+	"vnti/internal/logger"
 )
 
 func APICheck(ctx context.Context, _ *struct{}) (*presenter.SuccessResponse, error) {
-	logCtx := logger.APILogMessage(ctx, &logger.Logger, "test", "api:handler:main:apiCheck")
-
-	log := logCtx.Logger()
-	log.Debug().Msg("Text log")
-	panic("panic")
-	// return nil, errors.Join(errors.New("tes"), errors.New("tes2"), errors.New("tes3"))
+	l := logger.LogContext(ctx, "api:handler:main:apiCheck", "text")
+	l.Debug().Msg("Test - main")
 
 	return &presenter.SuccessResponse{Body: presenter.SuccessBody{
 		Success: true,

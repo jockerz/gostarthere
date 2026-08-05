@@ -3,7 +3,7 @@ package api
 import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
-	ZerologMiddleware "github.com/gofiber/contrib/v3/zerolog"
+	zerologMiddleware "github.com/gofiber/contrib/v3/zerolog"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/healthcheck"
@@ -27,25 +27,27 @@ import (
 )
 
 func NewApi(config *internal.Config) *fiber.App {
+	inititeLog(config)
+
 	fiber_app := fiber.New(fiber.Config{
 		AppName:      "API",
 		ErrorHandler: middleware.ErrorHandler,
 	})
 
-	fiber_app.Use(recover.New(
-		recover.Config{
-			PanicHandler: middleware.PanicHander,
-		},
-	))
-	fiber_app.Use(requestid.New())
-
-	// fiber_app.Use(logger.New(logger.Config{TimeZone: "Asia/jakarta"}))
-	logger.InitLogger("backend", "info", config.Debug)
-	fiber_app.Use(ZerologMiddleware.New(ZerologMiddleware.Config{
-		Logger: &logger.AccessLogger,
+	fiber_app.Use(requestid.New(requestid.Config{
+		Generator: middleware.GenRequestId,
 	}))
-	fiber_app.Use(middleware.NewLoggingMiddleware(config))
-
+	logField := zerologMiddleware.ConfigDefault.Fields
+	logField = append(logField, zerologMiddleware.FieldRequestID)
+	fiber_app.Use(zerologMiddleware.New(zerologMiddleware.Config{
+		Logger: &logger.AccessLogger,
+		Fields: logField,
+	}))
+	fiber_app.Use(recover.New(recover.Config{
+		PanicHandler: middleware.PanicHander,
+		// EnableStackTrace: true,
+	}))
+	// fiber_app.Use(middleware.LoggerToCtxMiddleware(config))
 	fiber_app.Use(cors.New(cors.Config{
 		AllowOrigins: []string{config.ORIGINS},
 		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization"},
@@ -104,4 +106,10 @@ func initialDatabase(config *internal.Config) {
 		&entities.UserToken{},
 		&entities.UserAuthProvider{},
 	)
+}
+
+func inititeLog(config *internal.Config) {
+	// fiber_app.Use(logger.New(logger.Config{TimeZone: "Asia/jakarta"}))
+	logger.InitLogger("backend", "INFO", config.Debug)
+	logger.InitAccessLogger(config.Debug)
 }

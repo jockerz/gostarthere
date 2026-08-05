@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"vnti/internal"
+	"vnti/internal/logger"
 	"vnti/pkg/entities"
 	"vnti/pkg/tasks"
 	"vnti/pkg/user"
@@ -183,6 +184,10 @@ func (s *service) GenerateAuthToken(ctx context.Context, user *entities.User) (*
 	if err != nil {
 		return nil, ErrCreateTokenFailed
 	}
+
+	l := logger.LogContext(ctx, "auth:service:Login", "AuthToken created")
+	l.Debug().Str("tokenPrefix", token.Prefix).Msg("User login")
+
 	return &token, nil
 }
 
@@ -427,6 +432,9 @@ func (s *service) Logout(ctx context.Context, tokenStr string) error {
 	if err := bcrypt.CompareHashAndPassword([]byte(token.Secret), []byte(tokenParts[1])); err != nil {
 		return ErrInvalidToken
 	}
+
+	l := logger.LogContext(ctx, "auth:service:Logout", "logout")
+	l.Debug().Str("tokenPrefix", tokenParts[0]).Msg("User logout")
 
 	return s.repo.RevokeAuthToken(ctx, token.Prefix)
 }

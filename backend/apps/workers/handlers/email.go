@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"net/smtp"
 	"vnti/extensions/email"
-	"vnti/extensions/logger"
 	"vnti/pkg/tasks"
 
 	"github.com/hibiken/asynq"
+	"github.com/rs/zerolog/log"
 )
 
 const messageTemplate string = "From: %s\r\n" +
@@ -27,11 +27,11 @@ func HanderSendAuthEmail(smtpClient *smtp.Client) func(ctx context.Context, t *a
 		if err := json.Unmarshal(t.Payload(), &payload); err != nil {
 			return err
 		}
-		logger.Logger.Info().Msg(fmt.Sprintf("Processing the email %s\n", t.Payload()))
+		log.Info().Msg(fmt.Sprintf("Processing the email %s\n", t.Payload()))
 
 		message := writeMessage(payload.From, payload.Recipient, payload.Subject, payload.Message)
 		if err := email.SendEmail(smtpClient, payload.From, payload.Recipient, message); err != nil {
-			logger.Logger.Info().Msg(fmt.Sprintf("Error handler=HanderSendAuthEmail %v", err))
+			log.Info().Msg(fmt.Sprintf("Error handler=HanderSendAuthEmail %v", err))
 		}
 		return nil
 	}
