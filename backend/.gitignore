@@ -29,6 +29,7 @@ media/
 .env
 *.db
 asynqmon
-NOTE.md
+atlas
 docs/superpowers
 main
+NOTE.md

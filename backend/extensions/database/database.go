@@ -3,6 +3,7 @@ package database
 import (
 	"strings"
 
+	"github.com/rs/zerolog/log"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -33,7 +34,7 @@ func Connect(url string) {
 		Logger: newLogger,
 	})
 	if err != nil {
-		panic(err)
+		log.Panic().Err(err)
 	}
 	DB = _db
 }
@@ -42,7 +43,7 @@ func Connect(url string) {
 func ConnectTestDatabase() {
 	_db, err := gorm.Open(sqlite.Open("test.db"))
 	if err != nil {
-		panic(err)
+		log.Panic().Err(err)
 	}
 	DB = _db
 }

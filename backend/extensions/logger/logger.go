@@ -1,13 +1,11 @@
 package logger
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v3/middleware/requestid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -57,21 +55,4 @@ func InitAccessLogger(isDebug bool) {
 	AccessLogger = AccessLogger.With().
 		Timestamp().Str("log_app", accessLogAppName).Str("log_type", "ACCESS").
 		Logger()
-}
-
-func APILogMessage(ctx context.Context, event, namespace string, data ...any) zerolog.Context {
-	requestId := requestid.FromContext(ctx)
-
-	logCtx := log.Logger.With().Str("r", requestId)
-	if event != "" {
-		logCtx = logCtx.Str("event", event)
-	}
-	if namespace != "" {
-		logCtx = logCtx.Str("ns", namespace)
-	}
-	if len(data) > 0 {
-		logCtx.Any("data", data[0])
-	}
-
-	return logCtx
 }

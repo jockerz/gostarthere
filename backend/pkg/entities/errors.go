@@ -1,5 +1,7 @@
 package entities
 
+import "github.com/rs/zerolog"
+
 type ErrorCode string
 
 const (
@@ -35,3 +37,26 @@ func IsDomainError(err error) (*Error, bool) {
 	e, ok := err.(*Error)
 	return e, ok
 }
+
+type ErrorDetail struct {
+	Detail string `json:"detail"`
+}
+
+type ErrorModel struct {
+	Status   int            `json:"status"`
+	Type     string         `json:"type"`
+	Title    string         `json:"title"`
+	Detail   string         `json:"detail"`
+	Instance string         `json:"instance"`
+	Extra    map[string]any `json:"extra,omitempty"`
+	Errors   []ErrorDetail  `json:"errors,omitempty"`
+	LogLevel zerolog.Level  `json:"-"`
+}
+
+func (e *ErrorModel) Error() string {
+	return e.Title
+}
+
+func (e *ErrorModel) JSONResponse() {}
+
+func (e *ErrorModel) LogMessage() {}

@@ -1,6 +1,8 @@
 package api
 
 import (
+	"strings"
+
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
 	zerologMiddleware "github.com/gofiber/contrib/v3/zerolog"
@@ -11,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/requestid"
 	"github.com/gofiber/fiber/v3/middleware/responsetime"
 	"github.com/gofiber/fiber/v3/middleware/static"
+	"github.com/rs/zerolog/log"
 
 	"vnti/apps/api/middleware"
 	"vnti/apps/api/routes"
@@ -99,6 +102,12 @@ func initiateAPIv1(app *fiber.App, config *internal.Config) {
 }
 
 func initialDatabase(config *internal.Config) {
+	if !config.Debug || !strings.Contains(config.DB_URL, "sqlite") {
+		// Prod DB migration using atlas
+		log.Debug().Msg("Skips database migration for non dev or non SQLite DB")
+		return
+	}
+
 	database.Connect(config.DB_URL)
 	database.DB.AutoMigrate(
 		&entities.User{},
