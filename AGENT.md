@@ -23,18 +23,20 @@ Fullstack web application: **Go (Fiber + Huma)** backend, **Svelte 5 (SvelteKit 
 
 ### Local Development
 ```bash
-docker compose up -d              # Start all services
-docker compose logs -f backend    # Follow backend logs
-docker compose down               # Stop all services
-docker compose down -v            # Stop and remove volumes (resets DB)
+docker compose -f docker-compose.base.yml -f docker-compose.dev.yml up -d   # Start all services (incl. mailhog)
+docker compose -f docker-compose.base.yml -f docker-compose.dev.yml logs -f backend   # Follow backend logs
+docker compose -f docker-compose.base.yml -f docker-compose.dev.yml down   # Stop all services
+docker compose -f docker-compose.base.yml -f docker-compose.dev.yml down -v   # Stop and remove volumes (resets DB)
 ```
 
-Services: Frontend (`http://localhost:8080`), API (`http://localhost:8080/api/v1/...`), Traefik Dashboard (`http://localhost:8081`)
+Services: Frontend (`http://localhost:8080`), API (`http://localhost:8080/api/v1/...`), Traefik Dashboard (`http://localhost:8081`), Mailhog UI (`http://localhost:8025`)
 
 ### Production
 ```bash
-ACME_EMAIL=you@example.com docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+ACME_EMAIL=you@example.com SMTP_HOST=smtp.example.com docker compose -f docker-compose.base.yml -f docker-compose.prod.yml up -d
 ```
+
+Production overrides the backend SMTP config from the root `.env` (`SMTP_HOST`, `SMTP_PORT`, `SMTP_STARTTLS`, `SMTP_USERNAME`, `SMTP_PASSWORD`); mailhog is dev-only.
 
 ## Project Structure
 

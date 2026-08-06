@@ -32,8 +32,30 @@ This is fullstack web application, built with Go (Fiber + Huma) for backend and 
 
 ### Development
 
+```sh
+docker compose -f docker-compose.base.yml -f docker-compose.dev.yml up
+```
+
+Or daemon mode
+```sh
+docker compose -f docker-compose.base.yml -f docker-compose.dev.yml up -d
+```
+
+Includes Mailhog for local email testing (SMTP at `localhost:1025`, UI at `http://localhost:8025`).
+
 
 ### Production
+
+```sh
+ACME_EMAIL=you@example.com SMTP_HOST=smtp.example.com docker compose -f docker-compose.base.yml -f docker-compose.prod.yml up
+```
+
+Or daemon mode
+```sh
+ACME_EMAIL=you@example.com SMTP_HOST=smtp.example.com docker compose -f docker-compose.base.yml -f docker-compose.prod.yml up -d
+```
+
+Set `SMTP_HOST` (and optionally `SMTP_PORT`, `SMTP_STARTTLS`, `SMTP_USERNAME`, `SMTP_PASSWORD`) in `.env` to point the backend at a real SMTP provider.
 
 
 ## References and Inspirations
