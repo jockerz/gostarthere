@@ -200,12 +200,14 @@ func (s *service) Login(ctx context.Context, email_or_username, password string)
 	} else {
 		user, err = s.userRepo.FindByUsername(ctx, email_or_username)
 	}
-
+	log := logger.LogContext(ctx, "auth:service:Login", "login")
 	if err != nil {
+		log.Debug().Str("username/email", email_or_username).Msg("Invalid email or username")
 		return nil, nil, ErrInvalidCredentials
 	}
 
 	if user.Password == nil || !s.checkTokenSecret(*user.Password, password) {
+		log.Debug().Str("username/email", email_or_username).Msg("Invalid password")
 		return nil, nil, ErrInvalidCredentials
 	}
 

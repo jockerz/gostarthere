@@ -10,18 +10,19 @@ import (
 )
 
 func ErrorHandler(ctx fiber.Ctx, err error) error {
-	code := fiber.StatusInternalServerError
-	message := "Internal server error"
-
 	var e *fiber.Error
+
+	code := fiber.StatusInternalServerError
+	l := logger.LogContext(ctx, "", "error")
+	message := "Internal server error"
 
 	if errors.As(err, &e) && e != nil {
 		code = e.Code
 		message = e.Message
+		l.Err(e).Msg(fmt.Sprintf("%d:%s", code, message))
+	} else {
+		l.Err(e).Send()
 	}
-
-	l := logger.LogContext(ctx, "", "error")
-	l.Err(e).Msg(fmt.Sprintf("%d:%s", code, message))
 
 	return ctx.Status(code).JSON(map[string]any{
 		"success": false,
@@ -31,7 +32,6 @@ func ErrorHandler(ctx fiber.Ctx, err error) error {
 
 func PanicHander(ctx fiber.Ctx, e any) error {
 	l := logger.LogContext(ctx, "", "panic")
-	l.Error().Msg(string(debug.Stack()))
 
 	// Error to be handled by ErrorHandler
 	if err, ok := e.(error); ok {
