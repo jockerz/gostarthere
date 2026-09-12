@@ -42,6 +42,9 @@ func init() {
 //   - Create `media` children dir like: `avatar`, etc
 func preparationCheck() {
 	config := internal.NewConfig()
+	if err := config.Check(); err != nil {
+		panic(err)
+	}
 
 	_, err := os.Stat(config.MEDIA_PATH)
 	if err != nil && strings.Contains(err.Error(), "no such file or directory") {
@@ -51,7 +54,7 @@ func preparationCheck() {
 	}
 
 	for _, dirname := range []string{
-		"avatar",
+		"avatar", // Media directory
 	} {
 		dir_path := config.MEDIA_PATH + string(os.PathSeparator) + dirname
 		// Try to create dir, ignore errors
@@ -62,7 +65,6 @@ func preparationCheck() {
 func runApi(cmd *cobra.Command, args []string) {
 	config := internal.NewConfig()
 	api := api.NewApi(config)
-
 	log.Fatal().AnErr("API", api.Listen("0.0.0.0:8080", fiber.ListenConfig{
 		EnablePrefork: !config.Debug,
 	}))
@@ -70,6 +72,7 @@ func runApi(cmd *cobra.Command, args []string) {
 
 func runWorker(cmd *cobra.Command, args []string) {
 	config := internal.NewConfig()
+	log.Printf("%+v\n", config)
 	worker := workers.New(config)
 	log.Fatal().AnErr("Worker", workerHandlers.Run(worker))
 }

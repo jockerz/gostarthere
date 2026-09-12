@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/rs/zerolog/log"
@@ -12,7 +13,7 @@ type AsService struct {
 }
 
 func (s *AsService) EnqueueTask(task *asynq.Task) error {
-	taskInfo, err := s.asynqClient.Enqueue(task)
+	taskInfo, err := s.asynqClient.Enqueue(task, asynq.Retention(time.Hour))
 
 	log.Info().Msg(fmt.Sprintf("task queue info: %+v, err: %v\n", taskInfo, err))
 	if err != nil {

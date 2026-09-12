@@ -3,9 +3,7 @@ node_modules
 .gitignore
 .svelte-kit
 build
-.env
 .env.*
-!.env.example
 .vscode/
 .idea/
 NOTE.md

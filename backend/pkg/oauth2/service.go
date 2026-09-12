@@ -68,7 +68,7 @@ func NewService(
 }
 
 func (s service) BuildRedirectURL(provider string) string {
-	return fmt.Sprintf("%s/auth/oauth/callback?provider=%s", s.config.OAuthRedirectBase, provider)
+	return fmt.Sprintf("%s/auth/oauth/callback?provider=%s", s.config.BASE_URL, provider)
 }
 
 func (s *service) BuildAuthorizeURL(ctx context.Context, provider, codeChallenge string, userID *uint) (string, string, error) {

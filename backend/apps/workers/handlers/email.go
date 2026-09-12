@@ -27,7 +27,10 @@ func HanderSendAuthEmail(smtpClient *smtp.Client) func(ctx context.Context, t *a
 		if err := json.Unmarshal(t.Payload(), &payload); err != nil {
 			return err
 		}
-		log.Info().Msg(fmt.Sprintf("Processing the email %s\n", t.Payload()))
+
+		log.Info().
+			Str("event", "SendAuthEmail").
+			Msg(fmt.Sprintf("Processing email %s\n", t.Payload()))
 
 		message := writeMessage(payload.From, payload.Recipient, payload.Subject, payload.Message)
 		if err := email.SendEmail(smtpClient, payload.From, payload.Recipient, message); err != nil {

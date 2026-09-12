@@ -36,7 +36,6 @@ func New(config *internal.Config) (*smtp.Client, error) {
 	}
 
 	log.Debug().Msg("SMTP is ready")
-
 	return smtpClient, nil
 }
 
@@ -56,5 +55,6 @@ func SendEmail(client *smtp.Client, from, to, message string) error {
 	defer wc.Close()
 
 	_, err = wc.Write([]byte(message))
+	// _, err = fmt.Fprint(wc, message)
 	return err
 }

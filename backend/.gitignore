@@ -27,6 +27,8 @@ api_exe
 media/
 .zed/
 .env
+.env.docker
+.env.local
 *.db
 asynqmon
 atlas

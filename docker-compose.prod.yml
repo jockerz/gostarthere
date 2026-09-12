@@ -25,8 +25,9 @@ services:
 
   backend:
     restart: always
+    env_file: backend/.env
     environment:
-      SMTP_HOST: ${SMTP_HOST:?Set SMTP_HOST in .env}
+      SMTP_HOST: ${SMTP_HOST:?Set SMTP_HOST in backend/.env}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_STARTTLS: ${SMTP_STARTTLS:-}
       SMTP_USERNAME: ${SMTP_USERNAME:-}

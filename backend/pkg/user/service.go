@@ -21,11 +21,6 @@ import (
 
 type TokenAction string
 
-const (
-	TokenActionBaseURL string = "http://localhost:5173/auth"
-	BaseURL            string = "http://localhost:5173"
-)
-
 var (
 	ErrInvalidID          = errors.New("Invalid user ID")
 	ErrNotFound           = errors.New("user not found")
@@ -357,7 +352,7 @@ func (s *service) sendTokenEmail(ctx context.Context, actionType TokenAction, to
 	case tasks.TypeUserEmailUpdate:
 		subject = "Email Update"
 		url = fmt.Sprintf(
-			"%s/dashboard/update-email-confirm?token=%s", BaseURL, tokenWithSecret,
+			"%s/%s/update-email-confirm?token=%s", s.config.BASE_URL, s.config.FE_DASHBOARD_PATH, tokenWithSecret,
 		)
 		message = fmt.Sprintf("The confirm email update link: %s", url)
 	default:

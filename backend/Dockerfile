@@ -1,4 +1,4 @@
-FROM golang:1.25-alpine AS builder
+FROM golang:1.27-alpine AS builder
 
 RUN apk add --no-cache gcc musl-dev
 
@@ -8,6 +8,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+COPY .env .
 RUN CGO_ENABLED=1 go build -o main main.go
 
 FROM alpine:3.21
@@ -27,4 +28,5 @@ USER appuser
 
 EXPOSE 8080
 
-ENTRYPOINT ["./entrypoint.sh"]
+# ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["./main"]

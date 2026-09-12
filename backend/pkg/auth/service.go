@@ -40,8 +40,6 @@ const (
 	TokenActionActivation      TokenAction = "activation"
 	TokenActionResetActivation TokenAction = "reset_activation"
 	TokenActionResetPassword   TokenAction = "reset_password"
-	// TODO: using env and default, using prod baseUrl
-	TokenActionBaseURL string = "http://localhost:5173/auth"
 )
 
 type Service interface {
@@ -185,13 +183,15 @@ func (s *service) GenerateAuthToken(ctx context.Context, user *entities.User) (*
 		return nil, ErrCreateTokenFailed
 	}
 
-	l := logger.LogContext(ctx, "auth:service:Login", "AuthToken created")
+	l := logger.LogContext(ctx, "auth:service:GenAuthToken", "AuthToken created")
 	l.Debug().Str("tokenPrefix", token.Prefix).Msg("User login")
 
 	return &token, nil
 }
 
 func (s *service) Login(ctx context.Context, email_or_username, password string) (*entities.User, *entities.BearerToken, error) {
+	l := logger.LogContext(ctx, "auth:service:Login", "AuthToken created")
+	l.Info().Str("config", string(s.config.ToJSON()))
 	var user *entities.User
 	var err error
 
@@ -582,19 +582,19 @@ func (s *service) sendTokenEmail(ctx context.Context, actionType TokenAction, to
 	case TokenActionActivation:
 		subject = "Activation"
 		url = fmt.Sprintf(
-			"%s/activate?token=%s", TokenActionBaseURL, tokenWithSecret,
+			"%s/activate?token=%s", s.config.BASE_URL, tokenWithSecret,
 		)
 		message = fmt.Sprintf("The activation link: %s", url)
 	case TokenActionResetActivation:
 		subject = "Activation"
 		url = fmt.Sprintf(
-			"%s/activate?token=%s", TokenActionBaseURL, tokenWithSecret,
+			"%s/activate?token=%s", s.config.BASE_URL, tokenWithSecret,
 		)
 		message = fmt.Sprintf("The reset activation link: %s", url)
 	case TokenActionResetPassword:
 		subject = "Reset Password"
 		url = fmt.Sprintf(
-			"%s/reset-password?token=%s", TokenActionBaseURL, tokenWithSecret,
+			"%s/reset-password?token=%s", s.config.BASE_URL, tokenWithSecret,
 		)
 		message = fmt.Sprintf("The reset password link: %s", url)
 	default:

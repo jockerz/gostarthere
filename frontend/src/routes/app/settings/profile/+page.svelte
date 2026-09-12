@@ -132,10 +132,11 @@
                                 src={mediaBase + "/media/" + avatar}
                                 alt={name}
                             />
+                        {:else}
+                            <Avatar.Fallback>
+                                {name.charAt(0)?.toUpperCase() || "U"}
+                            </Avatar.Fallback>
                         {/if}
-                        <Avatar.Fallback class="text-lg">
-                            {name.charAt(0)?.toUpperCase() || "U"}
-                        </Avatar.Fallback>
                     </Avatar.Root>
                     {#if uploading}
                         <div

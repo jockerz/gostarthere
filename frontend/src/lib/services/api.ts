@@ -18,14 +18,7 @@ export type UserData = {
 export type AuthData = {
   access_token: string;
   refresh_token: string;
-  user: {
-    id: number;
-    email: string;
-    username: string;
-    name: string;
-    avatar: string;
-    active: boolean;
-  };
+  user: UserData;
 };
 
 export type ErrorDetail = {

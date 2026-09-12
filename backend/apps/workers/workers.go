@@ -32,7 +32,7 @@ func New(config *internal.Config) *AsynqWorker {
 	srv := asynq.NewServer(
 		asynq.RedisClientOpt{
 			Addr:     config.RedisAddress(),
-			DB:       config.REDIS_DB,
+			DB:       config.REDIS_DB_ASYNQ,
 			Password: config.REDIS_PASS,
 		},
 		asynq.Config{Concurrency: 10},

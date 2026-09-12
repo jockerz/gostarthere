@@ -8,6 +8,10 @@ services:
       - app-network
     restart: unless-stopped
 
+  # redis:
+  #   ports:
+  #     - "6380:6379"
+
   backend:
     depends_on:
       mailhog:

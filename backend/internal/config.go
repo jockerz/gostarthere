@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -10,25 +12,28 @@ import (
 )
 
 func LoadEnv() {
-	err := godotenv.Load(".env")
-	if err != nil {
-		// .env file is optional — environment variables may be set via Docker env_file or system env
-		return
-	}
+	// .env file is optional — environment variables may be set via Docker env_file or system env
+	_ = godotenv.Load(".env")
 }
 
 type Config struct {
-	Debug      bool
-	SECRET     string
+	Debug  bool
+	SECRET string
+
 	MEDIA_PATH string
 	ORIGINS    string
 
+	// Frontend base URL
+	BASE_URL string
+	// Frontend base PATH: e.g.: /app
+	FE_DASHBOARD_PATH string
+
 	DB_URL string
 
-	REDIS_HOST string
-	REDIS_PORT int
-	REDIS_DB   int
-	REDIS_PASS string
+	REDIS_HOST     string
+	REDIS_PORT     int
+	REDIS_DB_ASYNQ int
+	REDIS_PASS     string
 
 	SMTP_HOST     string
 	SMTP_PORT     int
@@ -40,7 +45,6 @@ type Config struct {
 	OAuthGoogleClientSecret string
 	OAuthGitHubClientID     string
 	OAuthGitHubClientSecret string
-	OAuthRedirectBase       string
 }
 
 func NewConfig() *Config {
@@ -59,49 +63,47 @@ func NewConfig() *Config {
 
 	origins := os.Getenv("ORIGINS")
 	if origins == "" {
-		origins = "http://127.0.0.1:5173, http://localhost:5173"
+		origins = "*"
 	}
 
 	redisHost, found := os.LookupEnv("REDIS_HOST")
-	if !found {
+	if !found || redisHost != "" {
 		redisHost = "127.0.0.1"
 	}
 
 	redisPort := 6379
 	redisPortStr, found := os.LookupEnv("REDIS_PORT")
-	if found {
+	if found && redisPortStr != "" {
 		redisPort, _ = strconv.Atoi(redisPortStr)
 	}
 
-	redisDB := 0
-	redisDBStr, found := os.LookupEnv("REDIS_DB")
-	if found {
-		redisDB, _ = strconv.Atoi(redisDBStr)
+	redisDBAsynq := 0
+	redisDBAsyncStr, found := os.LookupEnv("REDIS_DB_ASYNQ")
+	if found && redisDBAsyncStr != "" {
+		redisDBAsynq, _ = strconv.Atoi(redisDBAsyncStr)
 	}
 
 	smtpPort := 587
 	smtpPortStr, found := os.LookupEnv("SMTP_PORT")
-	if found {
+	if found && smtpPortStr != "" {
 		smtpPort, _ = strconv.Atoi(smtpPortStr)
-	}
-
-	oauthRedirectBase := os.Getenv("OAUTH_REDIRECT_BASE")
-	if oauthRedirectBase == "" {
-		oauthRedirectBase = "http://localhost:5173"
 	}
 
 	return &Config{
 		Debug:      debug,
 		SECRET:     os.Getenv("SECRET"),
+		BASE_URL:   os.Getenv("BASE_URL"),
 		MEDIA_PATH: mediaPath,
 		ORIGINS:    origins,
 
+		FE_DASHBOARD_PATH: os.Getenv("FE_DASHBOARD_PATH"),
+
 		DB_URL: os.Getenv("DB_URL"),
 
-		REDIS_HOST: redisHost,
-		REDIS_PORT: redisPort,
-		REDIS_DB:   redisDB,
-		REDIS_PASS: os.Getenv("REDIS_PASS"),
+		REDIS_HOST:     redisHost,
+		REDIS_PORT:     redisPort,
+		REDIS_DB_ASYNQ: redisDBAsynq,
+		REDIS_PASS:     os.Getenv("REDIS_PASS"),
 
 		SMTP_HOST:     os.Getenv("SMTP_HOST"),
 		SMTP_PORT:     smtpPort,
@@ -113,7 +115,6 @@ func NewConfig() *Config {
 		OAuthGoogleClientSecret: os.Getenv("OAUTH_GOOGLE_CLIENT_SECRET"),
 		OAuthGitHubClientID:     os.Getenv("OAUTH_GITHUB_CLIENT_ID"),
 		OAuthGitHubClientSecret: os.Getenv("OAUTH_GITHUB_CLIENT_SECRET"),
-		OAuthRedirectBase:       oauthRedirectBase,
 	}
 }
 
@@ -121,10 +122,10 @@ func NewTestConfig() *Config {
 	// Load env
 	LoadEnv()
 	return &Config{
-		DB_URL:   "test.db",
-		Debug:    true,
-		SECRET:   "secret",
-		REDIS_DB: 14,
+		DB_URL:         "test.db",
+		Debug:          true,
+		SECRET:         "secret",
+		REDIS_DB_ASYNQ: 14,
 	}
 }
 
@@ -134,4 +135,31 @@ func (c *Config) RedisAddress() string {
 
 func (c *Config) SMTPAddress() string {
 	return fmt.Sprintf("%s:%d", c.SMTP_HOST, c.SMTP_PORT)
+}
+
+func (c *Config) Check() error {
+	if c.DB_URL == "" {
+		return errors.New("Config: Invalid DB_URL")
+	}
+	if c.SECRET == "" {
+		return errors.New("Config: Invalid SECRET")
+	}
+	if c.BASE_URL == "" {
+		return errors.New("Config: Invalid BASE_URL (Web FE/UI)")
+	}
+	if c.SMTP_HOST == "" {
+		return errors.New("Config: Invalid SMTP_HOST")
+	}
+	if c.SMTP_USERNAME == "" {
+		return errors.New("Config: Invalid SMTP_USERNAME")
+	}
+	return nil
+}
+
+func (c *Config) ToJSON() []byte {
+	data, err := json.Marshal(c)
+	if err != nil {
+		panic(err)
+	}
+	return data
 }

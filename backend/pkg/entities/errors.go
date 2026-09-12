@@ -60,3 +60,7 @@ func (e *ErrorModel) Error() string {
 func (e *ErrorModel) JSONResponse() {}
 
 func (e *ErrorModel) LogMessage() {}
+
+var ee = ErrorModel{
+	Status: 500,
+}

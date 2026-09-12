@@ -158,7 +158,7 @@
         </Button>
 
         <p class="text-muted-foreground text-center text-sm">
-            Already have an account?
+            Already have an account or using third party authentication?
             <a href="/auth/login" class="hover:text-primary hover:underline"
                 >Log in</a
             >

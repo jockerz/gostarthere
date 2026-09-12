@@ -1,12 +1,10 @@
-.env
-.env.*
-!.env.docker.example
-.git
-.gitignore
-.air.toml
 .vscode/
 .idea/
 .zed/
+.env.*
+.git
+.gitignore
+.air.toml
 tmp/
 media/
 *.db

@@ -20,5 +20,7 @@ type UserAuthProvider struct {
 }
 
 func (UserAuthProvider) TableName() string {
-	return "user_auth_providers"
+	// TODO: update table name
+	// return "oauth2_providers"
+	return "user_oauth_providers"
 }

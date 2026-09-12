@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { DASHBOARD_PATH } from "$lib/const";
+    import { DASHBOARD_PATH, ENABLE_GITHUB, ENABLE_GOOGLE } from "$lib/const";
     import { Button } from "$lib/components/ui/button";
     import { Input } from "$lib/components/ui/input";
     import { Label } from "$lib/components/ui/label";
@@ -22,6 +22,7 @@
     let loading = $state(false);
     let fieldErrors = $state<Record<string, string>>({});
     let dialogOpen = $state(false);
+    let dialogTitle = $state("Login Error");
     let dialogMessage = $state("");
     let notActivated = $state(false);
     let resending = $state(false);
@@ -39,7 +40,10 @@
 
     async function handleLogin() {
         if (!validate()) return;
+
+        notActivated = false;
         loading = true;
+
         try {
             const result = await authApi.login(
                 email.trim(),
@@ -61,20 +65,24 @@
                 if (userData && !userData.active) {
                     clearTokens();
                     notActivated = true;
+                    dialogTitle = "Account Is Not Activated"
                     dialogMessage =
-                        "Your account is not activated. Please check your email for the activation link.";
+                        "Please check your email for the activation link.";
                     dialogOpen = true;
                     return;
                 }
 
                 goto(DASHBOARD_PATH);
             } else {
+              console.log(result)
+                dialogTitle = "Login Failed"
                 dialogMessage = result?.message || "Invalid credentials";
                 dialogOpen = true;
             }
         } catch (e) {
             const err = e as ErrorModel;
-            dialogMessage = err.detail || "Login failed";
+            dialogTitle = "Login Failed"
+            dialogMessage = err.detail;
             if (err.errors) {
                 for (const fe of err.errors) {
                     const key = fe.location?.replace("body.", "") || "email";
@@ -82,7 +90,6 @@
                 }
             }
             dialogOpen = true;
-            notActivated = false;
         } finally {
             loading = false;
         }
@@ -102,6 +109,9 @@
     }
 
     async function handleOAuth(provider: string) {
+        // Required for error dialog
+        notActivated = false;
+
         try {
             let url: string;
             if (provider === "google") {
@@ -119,8 +129,6 @@
             console.log(`handleOAuth: ${JSON.stringify(err)}`);
             dialogMessage = err.detail || `${provider} login failed`;
             dialogOpen = true;
-            // Required for error dialog
-            notActivated = false;
         }
     }
 </script>
@@ -163,6 +171,7 @@
             {loading ? "Logging in..." : "Login"}
         </Button>
 
+        {#if ENABLE_GOOGLE || ENABLE_GITHUB}
         <div class="relative my-4">
             <div class="absolute inset-0 flex items-center">
                 <span class="w-full border-t"></span>
@@ -175,13 +184,16 @@
         </div>
 
         <div class="grid grid-cols-2 gap-2">
+            {#if ENABLE_GOOGLE}
             <Button
                 variant="outline"
-                class="w-full"
+                class="w-full text-red-600"
                 onclick={() => handleOAuth("google")}
             >
                 Google
             </Button>
+            {/if}
+            {#if ENABLE_GITHUB}
             <Button
                 variant="outline"
                 class="w-full"
@@ -189,7 +201,9 @@
             >
                 GitHub
             </Button>
+            {/if}
         </div>
+        {/if}
 
         <p class="text-muted-foreground text-center text-sm">
             Don't have an account?
@@ -202,7 +216,7 @@
 
 <NotificationDialog
     bind:open={dialogOpen}
-    title={notActivated ? "Account Not Activated" : "Login Error"}
+    title={dialogTitle}
     message={dialogMessage}
 >
     {#snippet children()}

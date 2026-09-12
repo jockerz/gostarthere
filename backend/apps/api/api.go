@@ -80,6 +80,7 @@ func initiateAPIv1(app *fiber.App, config *internal.Config) {
 			BearerFormat: "JWT",
 		},
 	}
+	huma_config.OpenAPIPath = "/api/openapi"
 	huma_api := humafiber.New(app, huma_config)
 	group_v1 := huma.NewGroup(huma_api, "/v1")
 
@@ -102,13 +103,14 @@ func initiateAPIv1(app *fiber.App, config *internal.Config) {
 }
 
 func initialDatabase(config *internal.Config) {
+	database.Connect(config.DB_URL)
+
 	if !config.Debug || !strings.Contains(config.DB_URL, "sqlite") {
 		// Prod DB migration using atlas
 		log.Debug().Msg("Skips database migration for non dev or non SQLite DB")
 		return
 	}
 
-	database.Connect(config.DB_URL)
 	database.DB.AutoMigrate(
 		&entities.User{},
 		&entities.AuthToken{},

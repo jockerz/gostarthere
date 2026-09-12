@@ -7,10 +7,20 @@
 This is fullstack web application, built with Go (Fiber + Huma) for backend and Typescript (Svelte) for frontend.
 
 
+## URL
+
+### Dev Mode
+
+- [Backend: API Doc](http://127.0.0.1:8080/docs)
+- [Frontend](http://127.0.0.1:8080)
+- [MailHog](http://127.0.0.1:8025)
+- [Traefik Dashboard](http://127.0.0.1:8081/dashboard/)
+
 ## Features
 
 ### Backend
 
+- Rest API
 - OpenAPI documentation
 - Background task queue worker
 
@@ -18,6 +28,15 @@ This is fullstack web application, built with Go (Fiber + Huma) for backend and 
 ### Frontend
 
 - OAuth2 for easy authentication
+
+
+## Configuration
+
+### `.env`
+
+### `backend/.env`
+
+### `frontenv/.env`
 
 
 ## Tools
@@ -33,13 +52,11 @@ This is fullstack web application, built with Go (Fiber + Huma) for backend and 
 ### Development
 
 ```sh
-docker compose -f docker-compose.base.yml -f docker-compose.dev.yml up
+docker compose --env-file .env --env-file backend/.env --env-file frontend/.env \
+    -f docker-compose.base.yml -f docker-compose.dev.yml  \
+    up
 ```
 
-Or daemon mode
-```sh
-docker compose -f docker-compose.base.yml -f docker-compose.dev.yml up -d
-```
 
 Includes Mailhog for local email testing (SMTP at `localhost:1025`, UI at `http://localhost:8025`).
 
@@ -47,15 +64,10 @@ Includes Mailhog for local email testing (SMTP at `localhost:1025`, UI at `http:
 ### Production
 
 ```sh
-ACME_EMAIL=you@example.com SMTP_HOST=smtp.example.com docker compose -f docker-compose.base.yml -f docker-compose.prod.yml up
+docker compose --env-file .env --env-file backend/.env --env-file frontend/.env \
+    -f docker-compose.base.yml -f docker-compose.prod.yml  \
+    up
 ```
-
-Or daemon mode
-```sh
-ACME_EMAIL=you@example.com SMTP_HOST=smtp.example.com docker compose -f docker-compose.base.yml -f docker-compose.prod.yml up -d
-```
-
-Set `SMTP_HOST` (and optionally `SMTP_PORT`, `SMTP_STARTTLS`, `SMTP_USERNAME`, `SMTP_PASSWORD`) in `.env` to point the backend at a real SMTP provider.
 
 
 ## References and Inspirations
