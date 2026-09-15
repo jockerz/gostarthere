@@ -9,11 +9,15 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
+	"github.com/rs/zerolog/log"
 )
 
 func LoadEnv() {
 	// .env file is optional — environment variables may be set via Docker env_file or system env
-	_ = godotenv.Load(".env")
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Err(err)
+	}
 }
 
 type Config struct {
@@ -66,9 +70,9 @@ func NewConfig() *Config {
 		origins = "*"
 	}
 
-	redisHost, found := os.LookupEnv("REDIS_HOST")
-	if !found || redisHost != "" {
-		redisHost = "127.0.0.1"
+	redisHost := os.Getenv("REDIS_HOST")
+	if redisHost == "" {
+		redisHost = "redis"
 	}
 
 	redisPort := 6379
@@ -89,6 +93,8 @@ func NewConfig() *Config {
 		smtpPort, _ = strconv.Atoi(smtpPortStr)
 	}
 
+	smtpSsl := os.Getenv("SMTP_STARTTLS") == "1" || strings.ToLower(os.Getenv("SMTP_STARTTLS")) == "true"
+
 	return &Config{
 		Debug:      debug,
 		SECRET:     os.Getenv("SECRET"),
@@ -107,7 +113,7 @@ func NewConfig() *Config {
 
 		SMTP_HOST:     os.Getenv("SMTP_HOST"),
 		SMTP_PORT:     smtpPort,
-		SMTP_STARTTLS: os.Getenv("SMTP_STARTTLS") != "",
+		SMTP_STARTTLS: smtpSsl,
 		SMTP_USERNAME: os.Getenv("SMTP_USERNAME"),
 		SMTP_PASSWORD: os.Getenv("SMTP_PASSWORD"),
 

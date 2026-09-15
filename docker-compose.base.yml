@@ -70,6 +70,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     env_file: ./backend/.env
+    environment:
+      SERVICE_TYPE: api
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -77,6 +79,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      worker:
+        condition: service_started
     volumes:
       - backend-media:/app/media
     labels:
@@ -86,6 +90,26 @@ services:
       - "traefik.http.services.api.loadbalancer.server.port=8080"
       - "traefik.http.middlewares.api-strip.stripprefix.prefixes=/api"
       - "traefik.http.routers.api.middlewares=api-strip"
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file: ./backend/.env
+    environment:
+      SERVICE_TYPE: worker
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - backend-media:/app/media
     networks:
       - app-network
     restart: unless-stopped

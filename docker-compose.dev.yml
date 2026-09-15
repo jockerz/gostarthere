@@ -12,7 +12,12 @@ services:
   #   ports:
   #     - "6380:6379"
 
-  backend:
+  # backend:
+  #   depends_on:
+  #     mailhog:
+  #       condition: service_started
+
+  worker:
     depends_on:
       mailhog:
         condition: service_started

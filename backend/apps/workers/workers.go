@@ -2,13 +2,15 @@ package workers
 
 import (
 	"net/smtp"
+
+	"github.com/hibiken/asynq"
+	"github.com/rs/zerolog/log"
+	"gorm.io/gorm"
+
 	"vnti/extensions/database"
 	"vnti/extensions/email"
 	"vnti/extensions/logger"
 	"vnti/internal"
-
-	"github.com/hibiken/asynq"
-	"gorm.io/gorm"
 )
 
 type AsynqWorker struct {
@@ -35,8 +37,13 @@ func New(config *internal.Config) *AsynqWorker {
 			DB:       config.REDIS_DB_ASYNQ,
 			Password: config.REDIS_PASS,
 		},
-		asynq.Config{Concurrency: 10},
+		asynq.Config{
+			Concurrency: 10,
+			// Logger: log.Logger,
+		},
 	)
+
+	log.Info().Str("config", string(config.ToJSON())).Send()
 
 	worker := &AsynqWorker{
 		Config:      config,

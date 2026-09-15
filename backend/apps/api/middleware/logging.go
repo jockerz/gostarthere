@@ -22,6 +22,7 @@ func LoggerToCtxMiddleware(config *internal.Config) fiber.Handler {
 
 		err := ctx.Next()
 
+		// TODO: remove
 		log.Ctx(nCtx).Warn().Msg("Logger yo-")
 		log.Ctx(ctx).Warn().Msg("Logger yo---")
 		log.Debug().Msg("After")

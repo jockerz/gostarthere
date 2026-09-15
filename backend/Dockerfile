@@ -11,7 +11,9 @@ COPY . .
 COPY .env .
 RUN CGO_ENABLED=1 go build -o main main.go
 
-FROM alpine:3.21
+# -----------------------------------------------------
+
+FROM alpine:3.24
 
 RUN apk add --no-cache ca-certificates tzdata postgresql-dev \
     && addgroup -S appgroup && adduser -S appuser -G appgroup
@@ -26,7 +28,6 @@ RUN chmod +x entrypoint.sh \
 
 USER appuser
 
-EXPOSE 8080
+# EXPOSE 8080
 
-# ENTRYPOINT ["./entrypoint.sh"]
-ENTRYPOINT ["./main"]
+ENTRYPOINT ["./entrypoint.sh"]

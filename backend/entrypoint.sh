@@ -1,29 +1,43 @@
 #!/bin/sh
 #
-set -eu
+set -e
 
 # Create media directories
 mkdir -p /app/media/avatar
 
-# Start worker in background
-/app/main worker &
-WORKER_PID=$!
+case "${SERVICE_TYPE}" in
+    api)
+        /app/main api
+        ;;
+    worker)
+        /app/main worker
+        ;;
+    *)
+        echo "Unknown service type"
+        exit 1
+        ;;
+esac
 
-# Start API server in background
-/app/main api &
-API_PID=$!
 
-terminate() {
-    kill -TERM "$API_PID" "$WORKER_PID" 2>/dev/null || true
-    wait "$API_PID" "$WORKER_PID" 2>/dev/null || true
-}
+# # Start worker in background
+# /app/main worker &
+# WORKER_PID=$!
 
-trap terminate TERM INT
+# # Start API server in background
+# /app/main api &
+# API_PID=$!
 
-wait "$API_PID"
-STATUS=$?
+# terminate() {
+#     kill -TERM "$API_PID" "$WORKER_PID" 2>/dev/null || true
+#     wait "$API_PID" "$WORKER_PID" 2>/dev/null || true
+# }
 
-kill -TERM "$WORKER_PID" 2>/dev/null || true
-wait "$WORKER_PID" 2>/dev/null || true
+# trap terminate TERM INT
 
-exit "$STATUS"
+# wait "$API_PID"
+# STATUS=$?
+
+# kill -TERM "$WORKER_PID" 2>/dev/null || true
+# wait "$WORKER_PID" 2>/dev/null || true
+
+# exit "$STATUS"

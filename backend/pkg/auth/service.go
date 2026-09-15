@@ -581,20 +581,23 @@ func (s *service) sendTokenEmail(ctx context.Context, actionType TokenAction, to
 	switch actionType {
 	case TokenActionActivation:
 		subject = "Activation"
+		// Frontend URL
 		url = fmt.Sprintf(
-			"%s/activate?token=%s", s.config.BASE_URL, tokenWithSecret,
+			"%s/auth/activate?token=%s", s.config.BASE_URL, tokenWithSecret,
 		)
 		message = fmt.Sprintf("The activation link: %s", url)
 	case TokenActionResetActivation:
 		subject = "Activation"
+		// Frontend URL
 		url = fmt.Sprintf(
-			"%s/activate?token=%s", s.config.BASE_URL, tokenWithSecret,
+			"%s/auth/activate?token=%s", s.config.BASE_URL, tokenWithSecret,
 		)
 		message = fmt.Sprintf("The reset activation link: %s", url)
 	case TokenActionResetPassword:
 		subject = "Reset Password"
+		// Frontend URL
 		url = fmt.Sprintf(
-			"%s/reset-password?token=%s", s.config.BASE_URL, tokenWithSecret,
+			"%s/auth/reset-password?token=%s", s.config.BASE_URL, tokenWithSecret,
 		)
 		message = fmt.Sprintf("The reset password link: %s", url)
 	default:
