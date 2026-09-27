@@ -8,7 +8,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-COPY .env .
+# COPY .env .
 RUN CGO_ENABLED=1 go build -o main main.go
 
 # -----------------------------------------------------
