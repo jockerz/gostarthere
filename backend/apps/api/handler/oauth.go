@@ -11,15 +11,13 @@ import (
 	"vnti/apps/api/presenter"
 	"vnti/apps/api/schema"
 	"vnti/internal"
-	"vnti/pkg/auth"
 	"vnti/pkg/entities"
-	"vnti/pkg/oauth2"
-	"vnti/pkg/user"
+	"vnti/pkg/service"
 )
 
 const bearerPrefix = "Bearer "
 
-func OAuthAuthorize(config *internal.Config, svc oauth2.Service, authSvc auth.Service) func(context.Context, *schema.OAuthAuthorizeInput) (*schema.OAuthAuthorizeOutput, error) {
+func OAuthAuthorize(config *internal.Config, svc service.OAuthService, authSvc service.AuthService) func(context.Context, *schema.OAuthAuthorizeInput) (*schema.OAuthAuthorizeOutput, error) {
 	return func(ctx context.Context, input *schema.OAuthAuthorizeInput) (*schema.OAuthAuthorizeOutput, error) {
 		var authUserID *uint
 
@@ -49,7 +47,7 @@ func OAuthAuthorize(config *internal.Config, svc oauth2.Service, authSvc auth.Se
 	}
 }
 
-func OAuthCallback(config *internal.Config, svc oauth2.Service, authSvc auth.Service) func(context.Context, *schema.OAuthCallbackInput) (*schema.OAuthCallbackOutput, error) {
+func OAuthCallback(config *internal.Config, svc service.OAuthService, authSvc service.AuthService) func(context.Context, *schema.OAuthCallbackInput) (*schema.OAuthCallbackOutput, error) {
 	return func(ctx context.Context, input *schema.OAuthCallbackInput) (*schema.OAuthCallbackOutput, error) {
 		var authUserID *uint
 
@@ -69,10 +67,10 @@ func OAuthCallback(config *internal.Config, svc oauth2.Service, authSvc auth.Ser
 			ctx, input.Provider, input.Body.Code, input.Body.State, input.Body.CodeVerifier, authUserID,
 		)
 		if err != nil {
-			if errors.Is(err, oauth2.ErrInvalidState) {
+			if errors.Is(err, service.ErrOAuthInvalidState) {
 				return nil, huma.Error400BadRequest(err.Error())
 			}
-			if errors.Is(err, oauth2.ErrProviderAlreadyLinked) {
+			if errors.Is(err, service.ErrOAuthProviderAlreadyLinked) {
 				return nil, huma.Error409Conflict(err.Error())
 			}
 			return nil, huma.Error500InternalServerError(err.Error())
@@ -91,7 +89,7 @@ func OAuthCallback(config *internal.Config, svc oauth2.Service, authSvc auth.Ser
 	}
 }
 
-func SetPassword(svc user.Service) func(context.Context, *schema.SetPasswordInput) (*presenter.SuccessResponse, error) {
+func SetPassword(svc service.UserService) func(context.Context, *schema.SetPasswordInput) (*presenter.SuccessResponse, error) {
 	return func(ctx context.Context, input *schema.SetPasswordInput) (*presenter.SuccessResponse, error) {
 		currentUser := ctx.Value(middleware.CtxUserKey).(*entities.User)
 
@@ -121,7 +119,7 @@ func parseBearerToken(authHeader string) (string, error) {
 	return authHeader[len(bearerPrefix):], nil
 }
 
-func resolveUserFromJWT(ctx context.Context, jwtTokenStr string, jwtSecret string, authSvc auth.Service) (uint, error) {
+func resolveUserFromJWT(ctx context.Context, jwtTokenStr string, jwtSecret string, authSvc service.AuthService) (uint, error) {
 	claims := entities.JWTClaims{}
 	token, err := jwt.ParseWithClaims(jwtTokenStr, &claims, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

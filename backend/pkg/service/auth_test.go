@@ -1,4 +1,4 @@
-package auth
+package service
 
 import (
 	"context"
@@ -195,10 +195,10 @@ func (m *mockAuthRepo) RevokeAuthToken(_ context.Context, prefix string) error {
 	return nil
 }
 
-func setupAuthService(t *testing.T) (*mockAuthRepo, Service) {
+func setupAuthService(t *testing.T) (*mockAuthRepo, AuthService) {
 	t.Helper()
 	repo := newMockAuthRepo()
-	svc := NewService(&internal.Config{}, repo, repo, "test-secret-key", &asynq.Client{})
+	svc := NewAuthService(&internal.Config{}, repo, repo, "test-secret-key", &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	return repo, svc
 }
@@ -207,7 +207,7 @@ func TestGenerateAuthToken(t *testing.T) {
 	repo, svc := setupAuthService(t)
 	ctx := context.Background()
 
-	user, _ := repo.Create(ctx, &entities.User{Email: "gentok@test.com", Username: "gentok", Password: p("hash")})
+	user, _ := repo.Create(ctx, &entities.User{Email: "gentok@test.com", Username: "gentok", Password: authStringPtr("hash")})
 	t.Log(user)
 
 	token, err := svc.GenerateAuthToken(ctx, user)
@@ -245,13 +245,13 @@ func TestGenerateAuthTokenCreateError(t *testing.T) {
 
 	repo.createAuthTokenErr = errors.New("db error")
 
-	user, _ := repo.Create(ctx, &entities.User{Email: "err@test.com", Username: "err", Password: p("hash")})
+	user, _ := repo.Create(ctx, &entities.User{Email: "err@test.com", Username: "err", Password: authStringPtr("hash")})
 	_, err := svc.GenerateAuthToken(ctx, user)
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, ErrCreateTokenFailed) {
-		t.Fatalf("expected ErrCreateTokenFailed, got %v", err)
+	if !errors.Is(err, ErrAuthCreateTokenFailed) {
+		t.Fatalf("expected ErrAuthCreateTokenFailed, got %v", err)
 	}
 }
 
@@ -259,7 +259,7 @@ func TestGenerateUserToken(t *testing.T) {
 	repo, svc := setupAuthService(t)
 	ctx := context.Background()
 
-	user, _ := repo.Create(ctx, &entities.User{Email: "genutok@test.com", Username: "genutok", Password: p("hash")})
+	user, _ := repo.Create(ctx, &entities.User{Email: "genutok@test.com", Username: "genutok", Password: authStringPtr("hash")})
 
 	token, err := svc.GenerateUserToken(ctx, user.ID, entities.TokenActivation)
 	if err != nil {
@@ -287,13 +287,13 @@ func TestGenerateUserTokenCreateError(t *testing.T) {
 
 	repo.createUserTokenErr = errors.New("db error")
 
-	user, _ := repo.Create(ctx, &entities.User{Email: "utokerr@test.com", Username: "utokerr", Password: p("hash")})
+	user, _ := repo.Create(ctx, &entities.User{Email: "utokerr@test.com", Username: "utokerr", Password: authStringPtr("hash")})
 	_, err := svc.GenerateUserToken(ctx, user.ID, entities.TokenActivation)
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, ErrCreateTokenFailed) {
-		t.Fatalf("expected ErrCreateTokenFailed, got %v", err)
+	if !errors.Is(err, ErrAuthCreateTokenFailed) {
+		t.Fatalf("expected ErrAuthCreateTokenFailed, got %v", err)
 	}
 }
 
@@ -305,7 +305,7 @@ func TestLoginWithEmail(t *testing.T) {
 	repo.Create(ctx, &entities.User{
 		Email:    "user@test.com",
 		Username: "user",
-		Password: p(string(hashed)),
+		Password: authStringPtr(string(hashed)),
 		Active:   true,
 	})
 
@@ -329,7 +329,7 @@ func TestLoginWithUsername(t *testing.T) {
 	repo.Create(ctx, &entities.User{
 		Email:    "loginuser@test.com",
 		Username: "loginuser",
-		Password: p(string(hashed)),
+		Password: authStringPtr(string(hashed)),
 	})
 
 	user, _, err := svc.Login(ctx, "loginuser", "password123")
@@ -349,8 +349,8 @@ func TestLoginWrongPassword(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, ErrInvalidCredentials) {
-		t.Fatalf("expected ErrInvalidCredentials, got %v", err)
+	if !errors.Is(err, ErrAuthInvalidCredentials) {
+		t.Fatalf("expected ErrAuthInvalidCredentials, got %v", err)
 	}
 }
 
@@ -362,8 +362,8 @@ func TestLoginUserNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, ErrInvalidCredentials) {
-		t.Fatalf("expected ErrInvalidCredentials, got %v", err)
+	if !errors.Is(err, ErrAuthInvalidCredentials) {
+		t.Fatalf("expected ErrAuthInvalidCredentials, got %v", err)
 	}
 }
 
@@ -422,8 +422,8 @@ func TestRegisterDuplicateEmail(t *testing.T) {
 	repo, svc := setupAuthService(t)
 	ctx := context.Background()
 
-	hashed, _ := bcrypt.GenerateFromPassword([]byte("p"), bcrypt.DefaultCost)
-	repo.Create(ctx, &entities.User{Email: "dup@test.com", Username: "dup", Password: p(string(hashed))})
+	hashed, _ := bcrypt.GenerateFromPassword([]byte("authStringPtr"), bcrypt.DefaultCost)
+	repo.Create(ctx, &entities.User{Email: "dup@test.com", Username: "dup", Password: authStringPtr(string(hashed))})
 
 	input := &entities.Register{
 		Email:            "dup@test.com",
@@ -437,8 +437,8 @@ func TestRegisterDuplicateEmail(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for duplicate email")
 	}
-	if !errors.Is(err, ErrEmailAlreadyExists) {
-		t.Fatalf("expected ErrEmailAlreadyExists, got %v", err)
+	if !errors.Is(err, ErrAuthEmailAlreadyExists) {
+		t.Fatalf("expected ErrAuthEmailAlreadyExists, got %v", err)
 	}
 }
 
@@ -446,8 +446,8 @@ func TestRegisterDuplicateUsername(t *testing.T) {
 	repo, svc := setupAuthService(t)
 	ctx := context.Background()
 
-	hashed, _ := bcrypt.GenerateFromPassword([]byte("p"), bcrypt.DefaultCost)
-	repo.Create(ctx, &entities.User{Email: "first@test.com", Username: "dupuser", Password: p(string(hashed))})
+	hashed, _ := bcrypt.GenerateFromPassword([]byte("authStringPtr"), bcrypt.DefaultCost)
+	repo.Create(ctx, &entities.User{Email: "first@test.com", Username: "dupuser", Password: authStringPtr(string(hashed))})
 
 	input := &entities.Register{
 		Email:            "second@test.com",
@@ -461,8 +461,8 @@ func TestRegisterDuplicateUsername(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for duplicate username")
 	}
-	if !errors.Is(err, ErrUsernameAlreadyExists) {
-		t.Fatalf("expected ErrUsernameAlreadyExists, got %v", err)
+	if !errors.Is(err, ErrAuthUsernameAlreadyExists) {
+		t.Fatalf("expected ErrAuthUsernameAlreadyExists, got %v", err)
 	}
 }
 
@@ -473,7 +473,7 @@ func TestActivateAccountSuccess(t *testing.T) {
 	user, _ := repo.Create(ctx, &entities.User{
 		Email:    "activate@test.com",
 		Username: "activate",
-		Password: p("hashed"),
+		Password: authStringPtr("hashed"),
 		Active:   false,
 	})
 
@@ -509,8 +509,8 @@ func TestActivateAccountInvalidTokenFormat(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid token")
 	}
-	if !errors.Is(err, ErrInvalidToken) {
-		t.Fatalf("expected ErrInvalidToken, got %v", err)
+	if !errors.Is(err, ErrAuthInvalidToken) {
+		t.Fatalf("expected ErrAuthInvalidToken, got %v", err)
 	}
 }
 
@@ -531,7 +531,7 @@ func TestActivateAccountTokenExpired(t *testing.T) {
 	user, _ := repo.Create(ctx, &entities.User{
 		Email:    "expired@test.com",
 		Username: "expired",
-		Password: p("hashed"),
+		Password: authStringPtr("hashed"),
 	})
 
 	prefix := "expired-prefix"
@@ -547,8 +547,8 @@ func TestActivateAccountTokenExpired(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for expired token")
 	}
-	if !errors.Is(err, ErrInvalidToken) {
-		t.Fatalf("expected ErrInvalidToken, got %v", err)
+	if !errors.Is(err, ErrAuthInvalidToken) {
+		t.Fatalf("expected ErrAuthInvalidToken, got %v", err)
 	}
 }
 
@@ -559,7 +559,7 @@ func TestActivateAccountTokenUsed(t *testing.T) {
 	user, _ := repo.Create(ctx, &entities.User{
 		Email:    "used@test.com",
 		Username: "used",
-		Password: p("hashed"),
+		Password: authStringPtr("hashed"),
 	})
 
 	prefix := "expired-prefix"
@@ -576,8 +576,8 @@ func TestActivateAccountTokenUsed(t *testing.T) {
 	if err == nil {
 		t.Fatal("used token")
 	}
-	if !errors.Is(err, ErrUsedToken) {
-		t.Fatalf("expected ErrUsedToken, got %v", err)
+	if !errors.Is(err, ErrAuthUsedToken) {
+		t.Fatalf("expected ErrAuthUsedToken, got %v", err)
 	}
 }
 
@@ -585,11 +585,11 @@ func TestResendActivationWithEmail(t *testing.T) {
 	repo, svc := setupAuthService(t)
 	ctx := context.Background()
 
-	hashed, _ := bcrypt.GenerateFromPassword([]byte("p"), bcrypt.DefaultCost)
+	hashed, _ := bcrypt.GenerateFromPassword([]byte("authStringPtr"), bcrypt.DefaultCost)
 	repo.Create(ctx, &entities.User{
 		Email:    "resend@test.com",
 		Username: "resend",
-		Password: p(string(hashed)),
+		Password: authStringPtr(string(hashed)),
 	})
 
 	err := svc.ResendActivation(ctx, "resend@test.com")
@@ -606,11 +606,11 @@ func TestResendActivationWithUsername(t *testing.T) {
 	repo, svc := setupAuthService(t)
 	ctx := context.Background()
 
-	hashed, _ := bcrypt.GenerateFromPassword([]byte("p"), bcrypt.DefaultCost)
+	hashed, _ := bcrypt.GenerateFromPassword([]byte("authStringPtr"), bcrypt.DefaultCost)
 	repo.Create(ctx, &entities.User{
 		Email:    "resenduser@test.com",
 		Username: "resenduser",
-		Password: p(string(hashed)),
+		Password: authStringPtr(string(hashed)),
 	})
 
 	err := svc.ResendActivation(ctx, "resenduser")
@@ -637,7 +637,7 @@ func TestForgotPasswordWithEmail(t *testing.T) {
 	repo.Create(ctx, &entities.User{
 		Email:    "forgot@test.com",
 		Username: "forgot",
-		Password: p(string(hashed)),
+		Password: authStringPtr(string(hashed)),
 	})
 
 	err := svc.ForgotPassword(ctx, "forgot@test.com")
@@ -658,7 +658,7 @@ func TestForgotPasswordWithUsername(t *testing.T) {
 	repo.Create(ctx, &entities.User{
 		Email:    "forgotuser@test.com",
 		Username: "forgotuser",
-		Password: p(string(hashed)),
+		Password: authStringPtr(string(hashed)),
 	})
 
 	err := svc.ForgotPassword(ctx, "forgotuser")
@@ -685,7 +685,7 @@ func TestResetPasswordSuccess(t *testing.T) {
 	user, _ := repo.Create(ctx, &entities.User{
 		Email:    "reset@test.com",
 		Username: "reset",
-		Password: p(string(hashed)),
+		Password: authStringPtr(string(hashed)),
 	})
 
 	hashedSecret, _ := bcrypt.GenerateFromPassword([]byte("secret"), bcrypt.DefaultCost)
@@ -721,8 +721,8 @@ func TestResetPasswordInvalidTokenFormat(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid token")
 	}
-	if !errors.Is(err, ErrInvalidToken) {
-		t.Fatalf("expected ErrInvalidToken, got %v", err)
+	if !errors.Is(err, ErrAuthInvalidToken) {
+		t.Fatalf("expected ErrAuthInvalidToken, got %v", err)
 	}
 }
 
@@ -740,7 +740,7 @@ func TestServiceLogoutSuccess(t *testing.T) {
 	repo, svc := setupAuthService(t)
 	ctx := context.Background()
 
-	user, _ := repo.Create(ctx, &entities.User{Email: "logout@test.com", Username: "logout", Password: p("hash")})
+	user, _ := repo.Create(ctx, &entities.User{Email: "logout@test.com", Username: "logout", Password: authStringPtr("hash")})
 
 	rawSecret := "my-secret"
 	hashedSecret, _ := bcrypt.GenerateFromPassword([]byte(rawSecret), bcrypt.DefaultCost)
@@ -770,8 +770,8 @@ func TestServiceLogoutInvalidTokenFormat(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, ErrInvalidToken) {
-		t.Fatalf("expected ErrInvalidToken, got %v", err)
+	if !errors.Is(err, ErrAuthInvalidToken) {
+		t.Fatalf("expected ErrAuthInvalidToken, got %v", err)
 	}
 }
 
@@ -783,8 +783,8 @@ func TestServiceLogoutTokenNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, ErrInvalidToken) {
-		t.Fatalf("expected ErrInvalidToken, got %v", err)
+	if !errors.Is(err, ErrAuthInvalidToken) {
+		t.Fatalf("expected ErrAuthInvalidToken, got %v", err)
 	}
 }
 
@@ -792,7 +792,7 @@ func TestServiceLogoutSecretMismatch(t *testing.T) {
 	repo, svc := setupAuthService(t)
 	ctx := context.Background()
 
-	user, _ := repo.Create(ctx, &entities.User{Email: "logouterr@test.com", Username: "logouterr", Password: p("hash")})
+	user, _ := repo.Create(ctx, &entities.User{Email: "logouterr@test.com", Username: "logouterr", Password: authStringPtr("hash")})
 
 	hashedSecret, _ := bcrypt.GenerateFromPassword([]byte("real-secret"), bcrypt.DefaultCost)
 	repo.CreateAuthToken(ctx, &entities.AuthToken{
@@ -806,8 +806,8 @@ func TestServiceLogoutSecretMismatch(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for wrong secret")
 	}
-	if !errors.Is(err, ErrInvalidToken) {
-		t.Fatalf("expected ErrInvalidToken, got %v", err)
+	if !errors.Is(err, ErrAuthInvalidToken) {
+		t.Fatalf("expected ErrAuthInvalidToken, got %v", err)
 	}
 }
 
@@ -815,7 +815,7 @@ func TestServiceRefreshTokenSuccess(t *testing.T) {
 	repo, svc := setupAuthService(t)
 	ctx := context.Background()
 
-	user, _ := repo.Create(ctx, &entities.User{Email: "refresh@test.com", Username: "refresh", Password: p("hash")})
+	user, _ := repo.Create(ctx, &entities.User{Email: "refresh@test.com", Username: "refresh", Password: authStringPtr("hash")})
 
 	rawRefreshSecret := "my-refresh-secret"
 	hashedRefresh, _ := bcrypt.GenerateFromPassword([]byte(rawRefreshSecret), bcrypt.DefaultCost)
@@ -848,8 +848,8 @@ func TestServiceRefreshTokenInvalidFormat(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, ErrInvalidToken) {
-		t.Fatalf("expected ErrInvalidToken, got %v", err)
+	if !errors.Is(err, ErrAuthInvalidToken) {
+		t.Fatalf("expected ErrAuthInvalidToken, got %v", err)
 	}
 }
 
@@ -861,8 +861,8 @@ func TestServiceRefreshTokenNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, ErrInvalidToken) {
-		t.Fatalf("expected ErrInvalidToken, got %v", err)
+	if !errors.Is(err, ErrAuthInvalidToken) {
+		t.Fatalf("expected ErrAuthInvalidToken, got %v", err)
 	}
 }
 
@@ -870,7 +870,7 @@ func TestServiceRefreshTokenRevoked(t *testing.T) {
 	repo, svc := setupAuthService(t)
 	ctx := context.Background()
 
-	user, _ := repo.Create(ctx, &entities.User{Email: "revref@test.com", Username: "revref", Password: p("hash")})
+	user, _ := repo.Create(ctx, &entities.User{Email: "revref@test.com", Username: "revref", Password: authStringPtr("hash")})
 	now := time.Now()
 	repo.CreateAuthToken(ctx, &entities.AuthToken{
 		UserID:           user.ID,
@@ -887,8 +887,8 @@ func TestServiceRefreshTokenRevoked(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for revoked token")
 	}
-	if !errors.Is(err, ErrInvalidToken) {
-		t.Fatalf("expected ErrInvalidToken, got %v", err)
+	if !errors.Is(err, ErrAuthInvalidToken) {
+		t.Fatalf("expected ErrAuthInvalidToken, got %v", err)
 	}
 }
 
@@ -896,7 +896,7 @@ func TestServiceRefreshTokenExpiredRefresh(t *testing.T) {
 	repo, svc := setupAuthService(t)
 	ctx := context.Background()
 
-	user, _ := repo.Create(ctx, &entities.User{Email: "expref@test.com", Username: "expref", Password: p("hash")})
+	user, _ := repo.Create(ctx, &entities.User{Email: "expref@test.com", Username: "expref", Password: authStringPtr("hash")})
 	repo.CreateAuthToken(ctx, &entities.AuthToken{
 		UserID:           user.ID,
 		Prefix:           "expired-ref",
@@ -910,8 +910,8 @@ func TestServiceRefreshTokenExpiredRefresh(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for expired refresh token")
 	}
-	if !errors.Is(err, ErrRefreshTokenExpired) {
-		t.Fatalf("expected ErrInvalidToken, got %v", err)
+	if !errors.Is(err, ErrAuthRefreshTokenExpired) {
+		t.Fatalf("expected ErrAuthInvalidToken, got %v", err)
 	}
 }
 
@@ -919,7 +919,7 @@ func TestServiceRefreshTokenWrongSecret(t *testing.T) {
 	repo, svc := setupAuthService(t)
 	ctx := context.Background()
 
-	user, _ := repo.Create(ctx, &entities.User{Email: "wrongref@test.com", Username: "wrongref", Password: p("hash")})
+	user, _ := repo.Create(ctx, &entities.User{Email: "wrongref@test.com", Username: "wrongref", Password: authStringPtr("hash")})
 	hashedRefresh, _ := bcrypt.GenerateFromPassword([]byte("real-refresh"), bcrypt.DefaultCost)
 	repo.CreateAuthToken(ctx, &entities.AuthToken{
 		UserID:           user.ID,
@@ -934,8 +934,8 @@ func TestServiceRefreshTokenWrongSecret(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for wrong refresh secret")
 	}
-	if !errors.Is(err, ErrInvalidToken) {
-		t.Fatalf("expected ErrInvalidToken, got %v", err)
+	if !errors.Is(err, ErrAuthInvalidToken) {
+		t.Fatalf("expected ErrAuthInvalidToken, got %v", err)
 	}
 }
 
@@ -946,7 +946,7 @@ func TestResetPasswordTokenExpired(t *testing.T) {
 	user, _ := repo.Create(ctx, &entities.User{
 		Email:    "resetexp@test.com",
 		Username: "resetexp",
-		Password: p("hashed"),
+		Password: authStringPtr("hashed"),
 	})
 
 	prefix := "reset-exp-prefix"
@@ -962,8 +962,8 @@ func TestResetPasswordTokenExpired(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for expired token")
 	}
-	if !errors.Is(err, ErrInvalidToken) {
-		t.Fatalf("expected ErrInvalidToken, got %v", err)
+	if !errors.Is(err, ErrAuthInvalidToken) {
+		t.Fatalf("expected ErrAuthInvalidToken, got %v", err)
 	}
 }
-func p(s string) *string { return &s }
+func authStringPtr(s string) *string { return &s }

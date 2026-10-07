@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"vnti/pkg/auth"
+
 	"vnti/pkg/entities"
-	"vnti/pkg/user"
+	"vnti/pkg/service"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/golang-jwt/jwt/v5"
@@ -17,7 +17,7 @@ type contextKey string
 const CtxUserKey contextKey = "user"
 const BearerPrefix = "Bearer "
 
-func Auth(jwtSecret string, authSrv auth.Service, userSrv user.Service) func(ctx huma.Context, next func(huma.Context)) {
+func Auth(jwtSecret string, authSrv service.AuthService, userSrv service.UserService) func(ctx huma.Context, next func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		jwtTokenStr, err := getAuthToken(ctx.Header("Authorization"))
 		if err != nil {
@@ -57,7 +57,7 @@ func Auth(jwtSecret string, authSrv auth.Service, userSrv user.Service) func(ctx
 	}
 }
 
-func AuthAllowNonActive(jwtSecret string, authSrv auth.Service, userSrv user.Service) func(ctx huma.Context, next func(huma.Context)) {
+func AuthAllowNonActive(jwtSecret string, authSrv service.AuthService, userSrv service.UserService) func(ctx huma.Context, next func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		jwtTokenStr, err := getAuthToken(ctx.Header("Authorization"))
 		if err != nil {

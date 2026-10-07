@@ -7,12 +7,10 @@ import (
 	"vnti/apps/api/middleware"
 	"vnti/apps/api/schema"
 	"vnti/internal"
-	"vnti/pkg/auth"
-	"vnti/pkg/oauth2"
-	"vnti/pkg/user"
+	"vnti/pkg/service"
 )
 
-func AuthRouter(config *internal.Config, v1 *huma.Group, authSvc auth.Service, userSvc user.Service, oauthSvc oauth2.Service) {
+func AuthRouter(config *internal.Config, v1 *huma.Group, authSvc service.AuthService, userSvc service.UserService, oauthSvc service.OAuthService) {
 	huma.Register(v1, schema.LogoutOp, handler.Logout(authSvc))
 	huma.Register(v1, schema.RefreshTokenOp, handler.RefreshToken(authSvc))
 	huma.Register(v1, schema.LoginOp, handler.Login(authSvc))

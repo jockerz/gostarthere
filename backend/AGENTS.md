@@ -39,8 +39,15 @@ backend/
 │  ├─ entities/                 # Pure business entities
 │  │  └─ auth.go                # The Commandline App object
 │  │  └─ user.go                # The Commandline App object
-│  ├─ auth/                     # repository + services for auth entity
-│  ├─ user/                     # repository + services for user entity
+│  ├─ repository/               # Persistence interfaces and implementations (one package)
+│  │  ├─ auth.go
+│  │  ├─ oauth2.go
+│  │  └─ user.go
+│  ├─ service/                  # Business use cases (one package)
+│  │  ├─ auth.go
+│  │  ├─ oauth2.go
+│  │  └─ user.go
+│  └─ tasks/                    # Background task definitions and enqueueing
 .air.toml                       # `air` configuration
 go.mod
 main.go                         # the main func
@@ -55,21 +62,23 @@ Makefile                        # Make file
 | api/presenter | API Request + response | `gorm.op/*` |
 | api/schema | OpenAPI (using Huma) operation for handlers | `gorm.op/*` |
 | pkg/  | Business logic | `apps/*`, `github.com/gofiber/*`, `github.com/danielgtaylor/huma` |
-| pkg/entities | Entities (Core Business Logic) | `apps/*`/ , `pkg/<feature_name>/*`/ |
-| pkg/<feature_name> | Repository (Entities CRUD) and Use case (application logic)  | `apps/*`/ |
+| pkg/entities | Entities (Core Business Logic) | `apps/*`, `pkg/repository`, `pkg/service` |
+| pkg/repository | Persistence interfaces and implementations | `apps/*`, `pkg/service` |
+| pkg/service | Use cases (application logic) | `apps/*` |
+| pkg/tasks | Background task definitions and enqueueing | `apps/*` |
 
 
 ## Agent Spesific Guidelines
 1. Never place business logic in the `apps`` package.
 2. All imports must respect the layer boundaries (see the table above).
-3. Use constructor injection (NewRepository(db), NewService(repository), NewUserHandler(svc))
+3. Use constructor injection (repository.NewUserRepository(db), service.NewUserService(repository), NewUserHandler(svc))
 4. Return domain errors from services; handlers translate them to HTTP status codes.
 5. Keep DTOs (`apps/api/presenter`) JSON‑only – agents should not add gorm tags here.
 6. When generating new feature, start with
    - `pkg/entities/<feature_name>.go`: struct of DB model (if needed)
    - `apps/api/presenter/<feature_name>.go`: request/response
-   - `pkg/<feature_name>/repository.go`: reposotory method (entities CRUD)
-   - `pkg/<feature_name>/service.go`: Use case (application logic) of the entities
+   - `pkg/repository/<feature_name>.go`: repository methods (entities CRUD)
+   - `pkg/service/<feature_name>.go`: use cases (application logic) for the entities
    - `apps/api/handler/<feature_name>.go`: handler
    - `apps/api/schema/<feature_name>.go`: Huma operation
    - `apps/api/routes/<feature_name>.go`: Registration of handler to the API

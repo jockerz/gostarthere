@@ -1,4 +1,4 @@
-package auth
+package repository
 
 import (
 	"context"
@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"vnti/pkg/entities"
-	"vnti/pkg/user"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+func authStringPtr(s string) *string { return &s }
 
 func setupAuthRepoDB(t *testing.T) *gorm.DB {
 	t.Helper()
@@ -24,11 +25,11 @@ func setupAuthRepoDB(t *testing.T) *gorm.DB {
 
 func TestRepositoryCreateAuthToken(t *testing.T) {
 	db := setupAuthRepoDB(t)
-	repo := NewRepository(db)
+	repo := NewAuthRepository(db)
 	ctx := context.Background()
 
-	userRepo := user.NewRepository(db)
-	user, _ := userRepo.Create(ctx, &entities.User{Email: "tok@test.com", Username: "tok", Password: p("hash")})
+	userRepo := NewUserRepository(db)
+	user, _ := userRepo.Create(ctx, &entities.User{Email: "tok@test.com", Username: "tok", Password: authStringPtr("hash")})
 
 	token := &entities.AuthToken{
 		UserID:    user.ID,
@@ -54,11 +55,11 @@ func TestRepositoryCreateAuthToken(t *testing.T) {
 
 func TestRepositoryFindAuthToken(t *testing.T) {
 	db := setupAuthRepoDB(t)
-	repo := NewRepository(db)
+	repo := NewAuthRepository(db)
 	ctx := context.Background()
 
-	userRepo := user.NewRepository(db)
-	user, _ := userRepo.Create(ctx, &entities.User{Email: "findtok@test.com", Username: "findtok", Password: p("hash")})
+	userRepo := NewUserRepository(db)
+	user, _ := userRepo.Create(ctx, &entities.User{Email: "findtok@test.com", Username: "findtok", Password: authStringPtr("hash")})
 	repo.CreateAuthToken(ctx, &entities.AuthToken{
 		UserID:    user.ID,
 		Prefix:    "find-auth",
@@ -77,7 +78,7 @@ func TestRepositoryFindAuthToken(t *testing.T) {
 
 func TestRepositoryFindAuthTokenNotFound(t *testing.T) {
 	db := setupAuthRepoDB(t)
-	repo := NewRepository(db)
+	repo := NewAuthRepository(db)
 	ctx := context.Background()
 
 	_, err := repo.FindAuthToken(ctx, "nonexistent")
@@ -88,11 +89,11 @@ func TestRepositoryFindAuthTokenNotFound(t *testing.T) {
 
 func TestRepositoryRefreshAuthToken(t *testing.T) {
 	db := setupAuthRepoDB(t)
-	repo := NewRepository(db)
+	repo := NewAuthRepository(db)
 	ctx := context.Background()
 
-	userRepo := user.NewRepository(db)
-	user, _ := userRepo.Create(ctx, &entities.User{Email: "refreshtok@test.com", Username: "refreshtok", Password: p("hash")})
+	userRepo := NewUserRepository(db)
+	user, _ := userRepo.Create(ctx, &entities.User{Email: "refreshtok@test.com", Username: "refreshtok", Password: authStringPtr("hash")})
 	now := time.Now()
 	original, _ := repo.CreateAuthToken(ctx, &entities.AuthToken{
 		UserID:    user.ID,
@@ -119,11 +120,11 @@ func TestRepositoryRefreshAuthToken(t *testing.T) {
 
 func TestRepositoryRevokeAuthToken(t *testing.T) {
 	db := setupAuthRepoDB(t)
-	repo := NewRepository(db)
+	repo := NewAuthRepository(db)
 	ctx := context.Background()
 
-	userRepo := user.NewRepository(db)
-	user, _ := userRepo.Create(ctx, &entities.User{Email: "revoketok@test.com", Username: "revoketok", Password: p("hash")})
+	userRepo := NewUserRepository(db)
+	user, _ := userRepo.Create(ctx, &entities.User{Email: "revoketok@test.com", Username: "revoketok", Password: authStringPtr("hash")})
 	repo.CreateAuthToken(ctx, &entities.AuthToken{
 		UserID:    user.ID,
 		Prefix:    "revoke-auth",
@@ -147,11 +148,11 @@ func TestRepositoryRevokeAuthToken(t *testing.T) {
 
 func TestRepositoryCreateUserToken(t *testing.T) {
 	db := setupAuthRepoDB(t)
-	repo := NewRepository(db)
+	repo := NewAuthRepository(db)
 	ctx := context.Background()
 
-	userRepo := user.NewRepository(db)
-	user, _ := userRepo.Create(ctx, &entities.User{Email: "usertok@test.com", Username: "usertok", Password: p("hash")})
+	userRepo := NewUserRepository(db)
+	user, _ := userRepo.Create(ctx, &entities.User{Email: "usertok@test.com", Username: "usertok", Password: authStringPtr("hash")})
 
 	token := &entities.UserToken{
 		UserID:    user.ID,
@@ -178,11 +179,11 @@ func TestRepositoryCreateUserToken(t *testing.T) {
 
 func TestRepositoryFindUserToken(t *testing.T) {
 	db := setupAuthRepoDB(t)
-	repo := NewRepository(db)
+	repo := NewAuthRepository(db)
 	ctx := context.Background()
 
-	userRepo := user.NewRepository(db)
-	user, _ := userRepo.Create(ctx, &entities.User{Email: "findut@test.com", Username: "findut", Password: p("hash")})
+	userRepo := NewUserRepository(db)
+	user, _ := userRepo.Create(ctx, &entities.User{Email: "findut@test.com", Username: "findut", Password: authStringPtr("hash")})
 	repo.CreateUserToken(ctx, &entities.UserToken{
 		UserID:    user.ID,
 		Prefix:    "find-ut",
@@ -202,7 +203,7 @@ func TestRepositoryFindUserToken(t *testing.T) {
 
 func TestRepositoryFindUserTokenNotFound(t *testing.T) {
 	db := setupAuthRepoDB(t)
-	repo := NewRepository(db)
+	repo := NewAuthRepository(db)
 	ctx := context.Background()
 
 	_, err := repo.FindUserToken(ctx, "nonexistent", entities.TokenActivation)
@@ -213,11 +214,11 @@ func TestRepositoryFindUserTokenNotFound(t *testing.T) {
 
 func TestRepositoryFindUserTokenWrongType(t *testing.T) {
 	db := setupAuthRepoDB(t)
-	repo := NewRepository(db)
+	repo := NewAuthRepository(db)
 	ctx := context.Background()
 
-	userRepo := user.NewRepository(db)
-	user, _ := userRepo.Create(ctx, &entities.User{Email: "wtut@test.com", Username: "wtut", Password: p("hash")})
+	userRepo := NewUserRepository(db)
+	user, _ := userRepo.Create(ctx, &entities.User{Email: "wtut@test.com", Username: "wtut", Password: authStringPtr("hash")})
 	repo.CreateUserToken(ctx, &entities.UserToken{
 		UserID:    user.ID,
 		Prefix:    "wrong-type-ut",
@@ -234,11 +235,11 @@ func TestRepositoryFindUserTokenWrongType(t *testing.T) {
 
 func TestRepositoryRefreshUserToken(t *testing.T) {
 	db := setupAuthRepoDB(t)
-	repo := NewRepository(db)
+	repo := NewAuthRepository(db)
 	ctx := context.Background()
 
-	userRepo := user.NewRepository(db)
-	user, _ := userRepo.Create(ctx, &entities.User{Email: "refreshut@test.com", Username: "refreshut", Password: p("hash")})
+	userRepo := NewUserRepository(db)
+	user, _ := userRepo.Create(ctx, &entities.User{Email: "refreshut@test.com", Username: "refreshut", Password: authStringPtr("hash")})
 	now := time.Now()
 	original, _ := repo.CreateUserToken(ctx, &entities.UserToken{
 		UserID:    user.ID,
@@ -266,11 +267,11 @@ func TestRepositoryRefreshUserToken(t *testing.T) {
 
 func TestRepositoryRevokeUserToken(t *testing.T) {
 	db := setupAuthRepoDB(t)
-	repo := NewRepository(db)
+	repo := NewAuthRepository(db)
 	ctx := context.Background()
 
-	userRepo := user.NewRepository(db)
-	user, _ := userRepo.Create(ctx, &entities.User{Email: "revokeut@test.com", Username: "revokeut", Password: p("hash")})
+	userRepo := NewUserRepository(db)
+	user, _ := userRepo.Create(ctx, &entities.User{Email: "revokeut@test.com", Username: "revokeut", Password: authStringPtr("hash")})
 	repo.CreateUserToken(ctx, &entities.UserToken{
 		UserID:    user.ID,
 		Prefix:    "revoke-ut",
@@ -295,11 +296,11 @@ func TestRepositoryRevokeUserToken(t *testing.T) {
 
 func TestRepositoryMarkuAsUsedUserToken(t *testing.T) {
 	db := setupAuthRepoDB(t)
-	repo := NewRepository(db)
+	repo := NewAuthRepository(db)
 	ctx := context.Background()
 
-	userRepo := user.NewRepository(db)
-	user, _ := userRepo.Create(ctx, &entities.User{Email: "markut@test.com", Username: "markut", Password: p("hash")})
+	userRepo := NewUserRepository(db)
+	user, _ := userRepo.Create(ctx, &entities.User{Email: "markut@test.com", Username: "markut", Password: authStringPtr("hash")})
 	token, _ := repo.CreateUserToken(ctx, &entities.UserToken{
 		UserID:    user.ID,
 		Prefix:    "mark-ut",
@@ -326,8 +327,8 @@ func TextRepositoryUpdate(t *testing.T) {
 	db := setupAuthRepoDB(t)
 	ctx := context.Background()
 
-	userRepo := user.NewRepository(db)
-	user, _ := userRepo.Create(ctx, &entities.User{Email: "markut@test.com", Username: "markut", Password: p("hash")})
+	userRepo := NewUserRepository(db)
+	user, _ := userRepo.Create(ctx, &entities.User{Email: "markut@test.com", Username: "markut", Password: authStringPtr("hash")})
 
 	if *user.Password == "hash" {
 		t.Fatalf("expected hashed password. got %s", *user.Password)

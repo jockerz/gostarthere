@@ -1,4 +1,4 @@
-package oauth2
+package service
 
 type googleTokenResponse struct {
 	AccessToken string `json:"access_token"`

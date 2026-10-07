@@ -1,4 +1,4 @@
-package auth
+package repository
 
 import (
 	"context"
@@ -25,20 +25,20 @@ type userTokenRepo interface {
 	MarkAsUsedUserToken(ctx context.Context, tokenId uint) error
 }
 
-type Repository interface {
+type AuthRepository interface {
 	authTokenRepo
 	userTokenRepo
 }
 
-type repository struct {
+type authRepositoryImpl struct {
 	DB *gorm.DB
 }
 
-func NewRepository(db *gorm.DB) Repository {
-	return &repository{DB: db}
+func NewAuthRepository(db *gorm.DB) AuthRepository {
+	return &authRepositoryImpl{DB: db}
 }
 
-func (r *repository) CreateAuthToken(ctx context.Context, token *entities.AuthToken) (*entities.AuthToken, error) {
+func (r *authRepositoryImpl) CreateAuthToken(ctx context.Context, token *entities.AuthToken) (*entities.AuthToken, error) {
 	err := r.DB.WithContext(ctx).Create(token).Error
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func (r *repository) CreateAuthToken(ctx context.Context, token *entities.AuthTo
 
 // Find token by its prefix.
 // Note: Don't forget to validate the token
-func (r *repository) FindAuthToken(ctx context.Context, prefix string) (*entities.AuthToken, error) {
+func (r *authRepositoryImpl) FindAuthToken(ctx context.Context, prefix string) (*entities.AuthToken, error) {
 	var token entities.AuthToken
 	err := r.DB.WithContext(ctx).Where("prefix = ?", prefix).First(&token).Error
 	if err != nil {
@@ -57,7 +57,7 @@ func (r *repository) FindAuthToken(ctx context.Context, prefix string) (*entitie
 	return &token, err
 }
 
-func (r *repository) RefreshAuthToken(ctx context.Context, token *entities.AuthToken) error {
+func (r *authRepositoryImpl) RefreshAuthToken(ctx context.Context, token *entities.AuthToken) error {
 	err := r.DB.WithContext(ctx).Where("prefix = ?", token.Prefix).Updates(&entities.AuthToken{
 		Secret:        token.Secret,
 		ExpiresAt:     token.ExpiresAt,
@@ -67,7 +67,7 @@ func (r *repository) RefreshAuthToken(ctx context.Context, token *entities.AuthT
 	return err
 }
 
-func (r *repository) RevokeAuthToken(ctx context.Context, prefix string) error {
+func (r *authRepositoryImpl) RevokeAuthToken(ctx context.Context, prefix string) error {
 	now := time.Now()
 	err := r.DB.WithContext(ctx).Where("prefix = ?", prefix).Updates(&entities.AuthToken{
 		RevokedAt: &now,
@@ -76,7 +76,7 @@ func (r *repository) RevokeAuthToken(ctx context.Context, prefix string) error {
 	return err
 }
 
-func (r *repository) CreateUserToken(ctx context.Context, token *entities.UserToken) (*entities.UserToken, error) {
+func (r *authRepositoryImpl) CreateUserToken(ctx context.Context, token *entities.UserToken) (*entities.UserToken, error) {
 	err := r.DB.WithContext(ctx).Create(token).Error
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func (r *repository) CreateUserToken(ctx context.Context, token *entities.UserTo
 	return token, err
 }
 
-func (r *repository) FindUserToken(ctx context.Context, prefix string, tokenType entities.UserTokenType) (*entities.UserToken, error) {
+func (r *authRepositoryImpl) FindUserToken(ctx context.Context, prefix string, tokenType entities.UserTokenType) (*entities.UserToken, error) {
 	var token entities.UserToken
 	err := r.DB.WithContext(ctx).Where(
 		"prefix = ? AND type = ?", prefix, tokenType,
@@ -95,7 +95,7 @@ func (r *repository) FindUserToken(ctx context.Context, prefix string, tokenType
 	return &token, err
 }
 
-func (r *repository) FindUserTokenByUserId(ctx context.Context, userId uint, tokenType entities.UserTokenType) (*[]entities.UserToken, error) {
+func (r *authRepositoryImpl) FindUserTokenByUserId(ctx context.Context, userId uint, tokenType entities.UserTokenType) (*[]entities.UserToken, error) {
 	var tokens []entities.UserToken
 
 	err := r.DB.WithContext(ctx).Where(
@@ -108,7 +108,7 @@ func (r *repository) FindUserTokenByUserId(ctx context.Context, userId uint, tok
 	return &tokens, err
 }
 
-func (r *repository) RefreshUserToken(ctx context.Context, token *entities.UserToken) error {
+func (r *authRepositoryImpl) RefreshUserToken(ctx context.Context, token *entities.UserToken) error {
 	err := r.DB.WithContext(ctx).Where(
 		"prefix = ? AND type = ?", token.Prefix, token.Type,
 	).Updates(&entities.UserToken{
@@ -120,7 +120,7 @@ func (r *repository) RefreshUserToken(ctx context.Context, token *entities.UserT
 	return err
 }
 
-func (r *repository) RevokeUserToken(ctx context.Context, prefix string) error {
+func (r *authRepositoryImpl) RevokeUserToken(ctx context.Context, prefix string) error {
 	now := time.Now()
 	err := r.DB.WithContext(ctx).Where("prefix = ?", prefix).Updates(&entities.UserToken{
 		RevokedAt: &now,
@@ -129,7 +129,7 @@ func (r *repository) RevokeUserToken(ctx context.Context, prefix string) error {
 	return err
 }
 
-func (r *repository) MarkAsUsedUserToken(ctx context.Context, tokenId uint) error {
+func (r *authRepositoryImpl) MarkAsUsedUserToken(ctx context.Context, tokenId uint) error {
 	now := time.Now()
 	err := r.DB.WithContext(ctx).Where("id = ?", tokenId).Updates(&entities.UserToken{
 		UsedAt: &now,

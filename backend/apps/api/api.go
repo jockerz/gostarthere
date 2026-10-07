@@ -27,10 +27,9 @@ import (
 	"vnti/extensions/logger"
 	"vnti/extensions/taskqueue"
 	"vnti/internal"
-	"vnti/pkg/auth"
 	"vnti/pkg/entities"
-	"vnti/pkg/oauth2"
-	"vnti/pkg/user"
+	"vnti/pkg/repository"
+	"vnti/pkg/service"
 )
 
 func NewApi(config *internal.Config) *fiber.App {
@@ -173,14 +172,14 @@ func initiateAPIv1(app *fiber.App, config *internal.Config) {
 		return nil
 	})
 
-	userRepo := user.NewRepository(database.DB)
-	authRepo := auth.NewRepository(database.DB)
-	userSvc := user.NewService(config, userRepo, authRepo, taskQueueClient)
-	authSvc := auth.NewService(config, userRepo, authRepo, config.SECRET, taskQueueClient)
+	userRepo := repository.NewUserRepository(database.DB)
+	authRepo := repository.NewAuthRepository(database.DB)
+	userSvc := service.NewUserService(config, userRepo, authRepo, taskQueueClient)
+	authSvc := service.NewAuthService(config, userRepo, authRepo, config.SECRET, taskQueueClient)
 
-	oauthStateStore := oauth2.NewStateStore()
-	oauthRepo := oauth2.NewRepository(database.DB)
-	oauthSvc := oauth2.NewService(config, oauthStateStore, userRepo, authSvc, oauthRepo)
+	oauthStateStore := service.NewOAuthStateStore()
+	oauthRepo := repository.NewOAuth2Repository(database.DB)
+	oauthSvc := service.NewOAuthService(config, oauthStateStore, userRepo, authSvc, oauthRepo)
 
 	routes.APICheck(group_v1)
 	routes.AuthRouter(config, group_v1, authSvc, userSvc, oauthSvc)

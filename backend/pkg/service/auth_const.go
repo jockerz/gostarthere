@@ -1,4 +1,4 @@
-package auth
+package service
 
 const (
 	TOKEN_PREFIX_LENGTH       int = 16

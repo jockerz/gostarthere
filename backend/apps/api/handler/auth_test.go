@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"vnti/apps/api/schema"
-	"vnti/pkg/auth"
 	"vnti/pkg/entities"
+	"vnti/pkg/service"
 )
 
 type mockAuthSvc struct {
@@ -185,7 +185,7 @@ func TestLoginHandlerSuccess(t *testing.T) {
 func TestLoginHandlerInvalidCredentials(t *testing.T) {
 	api, svc := setupAuthHandlerTest(t)
 	svc.loginFunc = func(_ context.Context, _, _ string) (*entities.User, *entities.BearerToken, error) {
-		return nil, nil, auth.ErrInvalidCredentials
+		return nil, nil, service.ErrAuthInvalidCredentials
 	}
 
 	resp := api.Post("/auth/login", map[string]any{
@@ -244,7 +244,7 @@ func TestRegisterHandlerPasswordMismatch(t *testing.T) {
 func TestRegisterHandlerDuplicateEmail(t *testing.T) {
 	api, svc := setupAuthHandlerTest(t)
 	svc.registerFunc = func(_ context.Context, _ *entities.Register) (*entities.User, error) {
-		return nil, auth.ErrEmailAlreadyExists
+		return nil, service.ErrAuthEmailAlreadyExists
 	}
 
 	resp := api.Post("/auth/register", map[string]any{
@@ -261,7 +261,7 @@ func TestRegisterHandlerDuplicateEmail(t *testing.T) {
 func TestRegisterHandlerDuplicateUsername(t *testing.T) {
 	api, svc := setupAuthHandlerTest(t)
 	svc.registerFunc = func(_ context.Context, _ *entities.Register) (*entities.User, error) {
-		return nil, auth.ErrUsernameAlreadyExists
+		return nil, service.ErrAuthUsernameAlreadyExists
 	}
 
 	resp := api.Post("/auth/register", map[string]any{
@@ -286,7 +286,7 @@ func TestActivateHandlerSuccess(t *testing.T) {
 func TestActivateHandlerInvalidToken(t *testing.T) {
 	api, svc := setupAuthHandlerTest(t)
 	svc.activateAccountFunc = func(_ context.Context, _ string) error {
-		return auth.ErrInvalidToken
+		return service.ErrAuthInvalidToken
 	}
 
 	resp := api.Post("/auth/activate/invalid")
@@ -365,7 +365,7 @@ func TestResetPasswordHandlerSuccess(t *testing.T) {
 func TestResetPasswordHandlerInvalidToken(t *testing.T) {
 	api, svc := setupAuthHandlerTest(t)
 	svc.resetPasswordFunc = func(_ context.Context, _, _ string) error {
-		return auth.ErrInvalidToken
+		return service.ErrAuthInvalidToken
 	}
 
 	resp := api.Post("/auth/reset-password", map[string]any{
@@ -403,7 +403,7 @@ func TestLogoutHandlerSuccess(t *testing.T) {
 func TestLogoutHandlerInvalidToken(t *testing.T) {
 	api, svc := setupAuthHandlerTest(t)
 	svc.logoutFunc = func(_ context.Context, _ string) error {
-		return auth.ErrInvalidToken
+		return service.ErrAuthInvalidToken
 	}
 
 	resp := api.Post("/auth/logout", map[string]any{
@@ -439,7 +439,7 @@ func TestRefreshTokenHandlerSuccess(t *testing.T) {
 func TestRefreshTokenHandlerInvalidToken(t *testing.T) {
 	api, svc := setupAuthHandlerTest(t)
 	svc.refreshTokenFunc = func(_ context.Context, _ string) (*entities.BearerToken, error) {
-		return nil, auth.ErrInvalidToken
+		return nil, service.ErrAuthInvalidToken
 	}
 
 	resp := api.Post("/auth/refresh", map[string]any{
@@ -461,13 +461,13 @@ func TestMockGetAuthTokenByJWTTokenSuccess(t *testing.T) {
 func TestMockGetAuthTokenByJWTTokenError(t *testing.T) {
 	_, svc := setupAuthHandlerTest(t)
 	svc.getAuthTokenByJWTTokenFunc = func(_ context.Context, _ string) (*entities.AuthToken, error) {
-		return nil, auth.ErrInvalidToken
+		return nil, service.ErrAuthInvalidToken
 	}
 
 	token, err := svc.GetAuthTokenByJWTToken(context.Background(), "invalid")
 	assert.Error(t, err)
 	assert.Nil(t, token)
-	assert.ErrorIs(t, err, auth.ErrInvalidToken)
+	assert.ErrorIs(t, err, service.ErrAuthInvalidToken)
 }
 
 func TestMockAuthByTokenWithSecretSuccess(t *testing.T) {
@@ -482,13 +482,13 @@ func TestMockAuthByTokenWithSecretSuccess(t *testing.T) {
 func TestMockAuthByTokenWithSecretError(t *testing.T) {
 	_, svc := setupAuthHandlerTest(t)
 	svc.authByTokenFunc = func(_ context.Context, _ string) (*entities.User, error) {
-		return nil, auth.ErrInvalidToken
+		return nil, service.ErrAuthInvalidToken
 	}
 
 	user, err := svc.AuthByToken(context.Background(), "invalid")
 	assert.Error(t, err)
 	assert.Nil(t, user)
-	assert.ErrorIs(t, err, auth.ErrInvalidToken)
+	assert.ErrorIs(t, err, service.ErrAuthInvalidToken)
 }
 
 func TestMockAuthByTokenWithSecretInactiveUser(t *testing.T) {

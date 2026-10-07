@@ -7,11 +7,10 @@ import (
 	"vnti/apps/api/middleware"
 	"vnti/apps/api/schema"
 	"vnti/internal"
-	"vnti/pkg/auth"
-	"vnti/pkg/user"
+	"vnti/pkg/service"
 )
 
-func UserRouter(config *internal.Config, v1 *huma.Group, authServ auth.Service, userSvc user.Service) {
+func UserRouter(config *internal.Config, v1 *huma.Group, authServ service.AuthService, userSvc service.UserService) {
 	protected_profile := huma.NewGroup(v1, "")
 	protected_profile.UseMiddleware(middleware.AuthAllowNonActive(config.SECRET, authServ, userSvc))
 	huma.Register(protected_profile, schema.GetProfile, handler.GetProfile(userSvc))

@@ -10,9 +10,8 @@ import (
 	"vnti/apps/api/middleware"
 	"vnti/apps/api/presenter"
 	"vnti/apps/api/schema"
-	"vnti/pkg/auth"
 	"vnti/pkg/entities"
-	"vnti/pkg/oauth2"
+	"vnti/pkg/service"
 )
 
 func toUserResponse(user *entities.User) presenter.UserResponse {
@@ -26,11 +25,11 @@ func toUserResponse(user *entities.User) presenter.UserResponse {
 	}
 }
 
-func Logout(svc auth.Service) func(context.Context, *schema.LogoutInput) (*presenter.SuccessResponse, error) {
+func Logout(svc service.AuthService) func(context.Context, *schema.LogoutInput) (*presenter.SuccessResponse, error) {
 	return func(ctx context.Context, input *schema.LogoutInput) (*presenter.SuccessResponse, error) {
 		err := svc.Logout(ctx, input.Body.Token)
 		if err != nil {
-			if errors.Is(err, auth.ErrInvalidToken) {
+			if errors.Is(err, service.ErrAuthInvalidToken) {
 				return nil, huma.Error400BadRequest(err.Error())
 			}
 			return nil, huma.Error500InternalServerError("internal server error")
@@ -42,11 +41,11 @@ func Logout(svc auth.Service) func(context.Context, *schema.LogoutInput) (*prese
 	}
 }
 
-func RefreshToken(svc auth.Service) func(context.Context, *schema.RefreshTokenInput) (*presenter.SuccessResponse, error) {
+func RefreshToken(svc service.AuthService) func(context.Context, *schema.RefreshTokenInput) (*presenter.SuccessResponse, error) {
 	return func(ctx context.Context, input *schema.RefreshTokenInput) (*presenter.SuccessResponse, error) {
 		tokens, err := svc.RefreshToken(ctx, input.Body.RefreshToken)
 		if err != nil {
-			if errors.Is(err, auth.ErrInvalidToken) {
+			if errors.Is(err, service.ErrAuthInvalidToken) {
 				return nil, huma.Error401Unauthorized(err.Error())
 			}
 			return nil, huma.Error500InternalServerError("internal server error")
@@ -59,11 +58,11 @@ func RefreshToken(svc auth.Service) func(context.Context, *schema.RefreshTokenIn
 	}
 }
 
-func Login(svc auth.Service) func(context.Context, *schema.LoginInput) (*presenter.SuccessResponse, error) {
+func Login(svc service.AuthService) func(context.Context, *schema.LoginInput) (*presenter.SuccessResponse, error) {
 	return func(ctx context.Context, input *schema.LoginInput) (*presenter.SuccessResponse, error) {
 		_, token, err := svc.Login(ctx, input.Body.Email, input.Body.Password)
 		if err != nil {
-			if errors.Is(err, auth.ErrInvalidCredentials) {
+			if errors.Is(err, service.ErrAuthInvalidCredentials) {
 				return nil, huma.Error401Unauthorized(err.Error())
 			}
 			return nil, huma.Error500InternalServerError("internal server error")
@@ -76,7 +75,7 @@ func Login(svc auth.Service) func(context.Context, *schema.LoginInput) (*present
 	}
 }
 
-func Register(svc auth.Service) func(context.Context, *schema.RegisterInput) (*presenter.SuccessResponse, error) {
+func Register(svc service.AuthService) func(context.Context, *schema.RegisterInput) (*presenter.SuccessResponse, error) {
 	return func(ctx context.Context, input *schema.RegisterInput) (*presenter.SuccessResponse, error) {
 		registerReq := &entities.Register{
 			Email:            input.Body.Email,
@@ -88,7 +87,7 @@ func Register(svc auth.Service) func(context.Context, *schema.RegisterInput) (*p
 
 		user, err := svc.Register(ctx, registerReq)
 		if err != nil {
-			if errors.Is(err, auth.ErrEmailAlreadyExists) || errors.Is(err, auth.ErrUsernameAlreadyExists) {
+			if errors.Is(err, service.ErrAuthEmailAlreadyExists) || errors.Is(err, service.ErrAuthUsernameAlreadyExists) {
 				return nil, huma.Error409Conflict(err.Error())
 			}
 			return nil, huma.Error422UnprocessableEntity(err.Error())
@@ -102,13 +101,13 @@ func Register(svc auth.Service) func(context.Context, *schema.RegisterInput) (*p
 	}
 }
 
-func Activate(svc auth.Service) func(context.Context, *schema.ActivateInput) (*presenter.SuccessResponse, error) {
+func Activate(svc service.AuthService) func(context.Context, *schema.ActivateInput) (*presenter.SuccessResponse, error) {
 	return func(ctx context.Context, input *schema.ActivateInput) (*presenter.SuccessResponse, error) {
 		err := svc.ActivateAccount(ctx, input.Token)
 		if err != nil {
-			if errors.Is(err, auth.ErrInvalidToken) {
+			if errors.Is(err, service.ErrAuthInvalidToken) {
 				return nil, huma.Error400BadRequest(err.Error())
-			} else if errors.Is(err, auth.ErrUsedToken) {
+			} else if errors.Is(err, service.ErrAuthUsedToken) {
 				return nil, huma.Error400BadRequest(err.Error())
 			}
 			return nil, huma.Error500InternalServerError("internal server error")
@@ -120,7 +119,7 @@ func Activate(svc auth.Service) func(context.Context, *schema.ActivateInput) (*p
 	}
 }
 
-func ResendActivation(svc auth.Service) func(context.Context, *schema.ResetActivationInput) (*presenter.SuccessResponse, error) {
+func ResendActivation(svc service.AuthService) func(context.Context, *schema.ResetActivationInput) (*presenter.SuccessResponse, error) {
 	return func(ctx context.Context, input *schema.ResetActivationInput) (*presenter.SuccessResponse, error) {
 		err := svc.ResendActivation(ctx, input.Body.Email)
 		if err != nil {
@@ -134,7 +133,7 @@ func ResendActivation(svc auth.Service) func(context.Context, *schema.ResetActiv
 	}
 }
 
-func ForgotPassword(svc auth.Service) func(context.Context, *schema.ForgotPasswordInput) (*presenter.SuccessResponse, error) {
+func ForgotPassword(svc service.AuthService) func(context.Context, *schema.ForgotPasswordInput) (*presenter.SuccessResponse, error) {
 	return func(ctx context.Context, input *schema.ForgotPasswordInput) (*presenter.SuccessResponse, error) {
 		err := svc.ForgotPassword(ctx, input.Body.Email)
 		if err != nil {
@@ -147,13 +146,13 @@ func ForgotPassword(svc auth.Service) func(context.Context, *schema.ForgotPasswo
 	}
 }
 
-func ResetPassword(svc auth.Service) func(context.Context, *schema.ResetPasswordInput) (*presenter.SuccessResponse, error) {
+func ResetPassword(svc service.AuthService) func(context.Context, *schema.ResetPasswordInput) (*presenter.SuccessResponse, error) {
 	return func(ctx context.Context, input *schema.ResetPasswordInput) (*presenter.SuccessResponse, error) {
 		err := svc.ResetPassword(ctx, input.Body.Token, input.Body.Password)
 		if err != nil {
-			if errors.Is(err, auth.ErrInvalidToken) {
+			if errors.Is(err, service.ErrAuthInvalidToken) {
 				return nil, huma.Error400BadRequest(err.Error())
-			} else if errors.Is(err, auth.ErrUsedToken) {
+			} else if errors.Is(err, service.ErrAuthUsedToken) {
 				return nil, huma.Error400BadRequest(err.Error())
 			}
 			return nil, huma.Error500InternalServerError("internal server error")
@@ -165,7 +164,7 @@ func ResetPassword(svc auth.Service) func(context.Context, *schema.ResetPassword
 	}
 }
 
-func GetAuthData(oauthSrv oauth2.Service) func(context.Context, *schema.GetAuthProviderInput) (*presenter.SuccessResponse, error) {
+func GetAuthData(oauthSrv service.OAuthService) func(context.Context, *schema.GetAuthProviderInput) (*presenter.SuccessResponse, error) {
 	return func(ctx context.Context, _ *schema.GetAuthProviderInput) (*presenter.SuccessResponse, error) {
 		current_user := ctx.Value(middleware.CtxUserKey).(*entities.User)
 		userAuthProviderData := oauthSrv.GetUserAuthProviderData(ctx, current_user.ID)

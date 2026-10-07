@@ -1,4 +1,4 @@
-package oauth2
+package service
 
 import (
 	"context"
@@ -13,51 +13,50 @@ import (
 	"time"
 
 	"vnti/internal"
-	"vnti/pkg/auth"
 	"vnti/pkg/entities"
-	"vnti/pkg/user"
+	"vnti/pkg/repository"
 )
 
 var httpClient = &http.Client{Timeout: 10 * time.Second}
 
 var (
-	ErrProviderNotConfigured = errors.New("oauth provider not configured")
-	ErrInvalidState          = errors.New("invalid or expired state")
-	ErrStateProviderMismatch = errors.New("state provider mismatch")
-	ErrUnsupportedProvider   = errors.New("unsupported oauth provider")
-	ErrEmailNotProvided      = errors.New("could not retrieve email from provider")
-	ErrUserNotFound          = errors.New("user not found")
-	ErrProviderAlreadyLinked = errors.New("provider already linked to a different user")
-	ErrTokenExchange         = errors.New("failed to exchange oauth code")
-	ErrFetchUserInfo         = errors.New("failed to fetch user info from provider")
-	ErrCreateUserFailed      = errors.New("failed to create user")
-	ErrLinkProviderFailed    = errors.New("failed to link oauth provider")
-	ErrGenerateTokenFailed   = errors.New("failed to generate auth token")
+	ErrOAuthProviderNotConfigured = errors.New("oauth provider not configured")
+	ErrOAuthInvalidState          = errors.New("invalid or expired state")
+	ErrOAuthStateProviderMismatch = errors.New("state provider mismatch")
+	ErrOAuthUnsupportedProvider   = errors.New("unsupported oauth provider")
+	ErrOAuthEmailNotProvided      = errors.New("could not retrieve email from provider")
+	ErrOAuthUserNotFound          = errors.New("user not found")
+	ErrOAuthProviderAlreadyLinked = errors.New("provider already linked to a different user")
+	ErrOAuthTokenExchange         = errors.New("failed to exchange oauth code")
+	ErrOAuthFetchUserInfo         = errors.New("failed to fetch user info from provider")
+	ErrOAuthCreateUserFailed      = errors.New("failed to create user")
+	ErrOAuthLinkProviderFailed    = errors.New("failed to link oauth provider")
+	ErrOAuthGenerateTokenFailed   = errors.New("failed to generate auth token")
 )
 
-type Service interface {
+type OAuthService interface {
 	BuildAuthorizeURL(ctx context.Context, provider, codeChallenge string, userID *uint) (url string, state string, err error)
 	HandleCallback(ctx context.Context, provider, code, state, codeVerifier string, authUserID *uint) (accessToken string, refreshToken string, user *entities.User, isNew bool, err error)
 	GetUserAuthProviderData(context.Context, uint) []*entities.UserAuthProvider
 }
 
-type service struct {
+type oauth2ServiceImpl struct {
 	config     *internal.Config
-	stateStore *StateStore
-	userRepo   user.Repository
-	authSvc    auth.Service
-	oauthRepo  Repository
+	stateStore *OAuthStateStore
+	userRepo   repository.UserRepository
+	authSvc    AuthService
+	oauthRepo  repository.OAuth2Repository
 	jwtSecret  string
 }
 
-func NewService(
+func NewOAuthService(
 	config *internal.Config,
-	stateStore *StateStore,
-	userRepo user.Repository,
-	authSvc auth.Service,
-	oauthRepo Repository,
-) Service {
-	return &service{
+	stateStore *OAuthStateStore,
+	userRepo repository.UserRepository,
+	authSvc AuthService,
+	oauthRepo repository.OAuth2Repository,
+) OAuthService {
+	return &oauth2ServiceImpl{
 		config:     config,
 		stateStore: stateStore,
 		userRepo:   userRepo,
@@ -67,18 +66,18 @@ func NewService(
 	}
 }
 
-func (s service) BuildRedirectURL(provider string) string {
+func (s oauth2ServiceImpl) BuildRedirectURL(provider string) string {
 	return fmt.Sprintf("%s/auth/oauth/callback?provider=%s", s.config.BASE_URL, provider)
 }
 
-func (s *service) BuildAuthorizeURL(ctx context.Context, provider, codeChallenge string, userID *uint) (string, string, error) {
+func (s *oauth2ServiceImpl) BuildAuthorizeURL(ctx context.Context, provider, codeChallenge string, userID *uint) (string, string, error) {
 	redirectURI := s.BuildRedirectURL(provider)
 	state := s.stateStore.Generate(provider, userID, codeChallenge)
 
 	switch provider {
 	case "google":
 		if s.config.OAuthGoogleClientID == "" {
-			return "", "", fmt.Errorf("%w: google", ErrProviderNotConfigured)
+			return "", "", fmt.Errorf("%w: google", ErrOAuthProviderNotConfigured)
 		}
 		params := url.Values{
 			"client_id":             {s.config.OAuthGoogleClientID},
@@ -93,7 +92,7 @@ func (s *service) BuildAuthorizeURL(ctx context.Context, provider, codeChallenge
 
 	case "github":
 		if s.config.OAuthGitHubClientID == "" {
-			return "", "", fmt.Errorf("%w: github", ErrProviderNotConfigured)
+			return "", "", fmt.Errorf("%w: github", ErrOAuthProviderNotConfigured)
 		}
 		params := url.Values{
 			"client_id":    {s.config.OAuthGitHubClientID},
@@ -104,20 +103,20 @@ func (s *service) BuildAuthorizeURL(ctx context.Context, provider, codeChallenge
 		return "https://github.com/login/oauth/authorize?" + params.Encode(), state, nil
 
 	default:
-		return "", "", fmt.Errorf("%w: %s", ErrUnsupportedProvider, provider)
+		return "", "", fmt.Errorf("%w: %s", ErrOAuthUnsupportedProvider, provider)
 	}
 }
 
-func (s *service) HandleCallback(ctx context.Context, provider string, code string, state string, codeVerifier string, authUserID *uint) (string, string, *entities.User, bool, error) {
+func (s *oauth2ServiceImpl) HandleCallback(ctx context.Context, provider string, code string, state string, codeVerifier string, authUserID *uint) (string, string, *entities.User, bool, error) {
 	entry := s.stateStore.Consume(state)
 	if entry == nil {
-		return "", "", nil, false, ErrInvalidState
+		return "", "", nil, false, ErrOAuthInvalidState
 	}
 	if entry.Provider != provider {
-		return "", "", nil, false, ErrStateProviderMismatch
+		return "", "", nil, false, ErrOAuthStateProviderMismatch
 	}
 	if entry.UserID != nil && (authUserID == nil || *authUserID != *entry.UserID) {
-		return "", "", nil, false, ErrInvalidState
+		return "", "", nil, false, ErrOAuthInvalidState
 	}
 
 	var providerUserID string
@@ -171,11 +170,11 @@ func (s *service) HandleCallback(ctx context.Context, provider string, code stri
 		}
 
 	default:
-		return "", "", nil, false, fmt.Errorf("%w: %s", ErrUnsupportedProvider, provider)
+		return "", "", nil, false, fmt.Errorf("%w: %s", ErrOAuthUnsupportedProvider, provider)
 	}
 
 	if email == "" {
-		return "", "", nil, false, ErrEmailNotProvided
+		return "", "", nil, false, ErrOAuthEmailNotProvided
 	}
 
 	var linkedUserID uint
@@ -190,7 +189,7 @@ func (s *service) HandleCallback(ctx context.Context, provider string, code stri
 			// Linking to existing authenticated user
 			user, err = s.userRepo.FindByID(ctx, *authUserID)
 			if err != nil {
-				return "", "", nil, false, ErrUserNotFound
+				return "", "", nil, false, ErrOAuthUserNotFound
 			}
 		} else {
 			// New OAuth login — find or create user
@@ -207,7 +206,7 @@ func (s *service) HandleCallback(ctx context.Context, provider string, code stri
 				}
 				user, err = s.userRepo.Create(ctx, user)
 				if err != nil {
-					return "", "", nil, false, fmt.Errorf("%w: %w", ErrCreateUserFailed, err)
+					return "", "", nil, false, fmt.Errorf("%w: %w", ErrOAuthCreateUserFailed, err)
 				}
 				isNew = true
 			}
@@ -220,33 +219,33 @@ func (s *service) HandleCallback(ctx context.Context, provider string, code stri
 			Email:          email,
 		}
 		if err := s.oauthRepo.Create(ctx, oauthEntry); err != nil {
-			return "", "", nil, false, fmt.Errorf("%w: %w", ErrLinkProviderFailed, err)
+			return "", "", nil, false, fmt.Errorf("%w: %w", ErrOAuthLinkProviderFailed, err)
 		}
 
 		linkedUserID = user.ID
 	} else {
 		// Already linked
 		if authUserID != nil && *authUserID != existingProv.UserID {
-			return "", "", nil, false, ErrProviderAlreadyLinked
+			return "", "", nil, false, ErrOAuthProviderAlreadyLinked
 		}
 		linkedUserID = existingProv.UserID
 	}
 
 	user, err := s.userRepo.FindByID(ctx, linkedUserID)
 	if err != nil {
-		return "", "", nil, false, ErrUserNotFound
+		return "", "", nil, false, ErrOAuthUserNotFound
 	}
 
 	authToken, err := s.authSvc.GenerateAuthToken(ctx, user)
 	if err != nil {
-		return "", "", nil, false, ErrGenerateTokenFailed
+		return "", "", nil, false, ErrOAuthGenerateTokenFailed
 	}
 
 	bearer := authToken.ToBearerToken(s.jwtSecret)
 	return bearer.AccessToken, bearer.RefreshToken, user, isNew, nil
 }
 
-func (s *service) GetUserAuthProviderData(ctx context.Context, userId uint) []*entities.UserAuthProvider {
+func (s *oauth2ServiceImpl) GetUserAuthProviderData(ctx context.Context, userId uint) []*entities.UserAuthProvider {
 	entries, err := s.oauthRepo.FindByUserID(ctx, userId)
 	if err != nil {
 		return []*entities.UserAuthProvider{}
@@ -266,7 +265,7 @@ func primaryEmail(emails []githubEmail) string {
 	return ""
 }
 
-func (s *service) exchangeGoogleCode(ctx context.Context, code, codeVerifier string) (*googleTokenResponse, error) {
+func (s *oauth2ServiceImpl) exchangeGoogleCode(ctx context.Context, code, codeVerifier string) (*googleTokenResponse, error) {
 	redirectURI := s.BuildRedirectURL("google")
 	data := url.Values{
 		"code":          {code},
@@ -279,64 +278,64 @@ func (s *service) exchangeGoogleCode(ctx context.Context, code, codeVerifier str
 
 	req, err := http.NewRequestWithContext(ctx, "POST", "https://oauth2.googleapis.com/token", strings.NewReader(data.Encode()))
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrTokenExchange, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthTokenExchange, err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrTokenExchange, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthTokenExchange, err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrTokenExchange, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthTokenExchange, err)
 	}
 
 	var tokenResp googleTokenResponse
 	if err := json.Unmarshal(body, &tokenResp); err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrTokenExchange, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthTokenExchange, err)
 	}
 
 	if tokenResp.AccessToken == "" {
 		var errResp googleTokenError
 		if json.Unmarshal(body, &errResp) == nil && errResp.Error != "" {
-			return nil, fmt.Errorf("%w: %s - %s", ErrTokenExchange, errResp.Error, errResp.ErrorDescription)
+			return nil, fmt.Errorf("%w: %s - %s", ErrOAuthTokenExchange, errResp.Error, errResp.ErrorDescription)
 		}
-		return nil, ErrTokenExchange
+		return nil, ErrOAuthTokenExchange
 	}
 
 	return &tokenResp, nil
 }
 
-func (s *service) fetchGoogleUserInfo(ctx context.Context, accessToken string) (*googleUserInfo, error) {
+func (s *oauth2ServiceImpl) fetchGoogleUserInfo(ctx context.Context, accessToken string) (*googleUserInfo, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://www.googleapis.com/oauth2/v2/userinfo", nil)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrFetchUserInfo, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthFetchUserInfo, err)
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrFetchUserInfo, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthFetchUserInfo, err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrFetchUserInfo, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthFetchUserInfo, err)
 	}
 
 	var userInfo googleUserInfo
 	if err := json.Unmarshal(body, &userInfo); err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrFetchUserInfo, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthFetchUserInfo, err)
 	}
 	return &userInfo, nil
 }
 
-func (s *service) exchangeGitHubCode(ctx context.Context, code string) (*githubTokenResponse, error) {
+func (s *oauth2ServiceImpl) exchangeGitHubCode(ctx context.Context, code string) (*githubTokenResponse, error) {
 	redirectURI := s.BuildRedirectURL("github")
 	data := url.Values{
 		"code":          {code},
@@ -347,84 +346,84 @@ func (s *service) exchangeGitHubCode(ctx context.Context, code string) (*githubT
 
 	req, err := http.NewRequestWithContext(ctx, "POST", "https://github.com/login/oauth/access_token", strings.NewReader(data.Encode()))
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrTokenExchange, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthTokenExchange, err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrTokenExchange, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthTokenExchange, err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrTokenExchange, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthTokenExchange, err)
 	}
 
 	var tokenResp githubTokenResponse
 	if err := json.Unmarshal(body, &tokenResp); err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrTokenExchange, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthTokenExchange, err)
 	}
 
 	if tokenResp.Error != "" {
-		return nil, fmt.Errorf("%w: %s - %s", ErrTokenExchange, tokenResp.Error, tokenResp.ErrorDesc)
+		return nil, fmt.Errorf("%w: %s - %s", ErrOAuthTokenExchange, tokenResp.Error, tokenResp.ErrorDesc)
 	}
 
 	if tokenResp.AccessToken == "" {
-		return nil, ErrTokenExchange
+		return nil, ErrOAuthTokenExchange
 	}
 
 	return &tokenResp, nil
 }
 
-func (s *service) fetchGitHubUserInfo(ctx context.Context, accessToken string) (*githubUserInfo, error) {
+func (s *oauth2ServiceImpl) fetchGitHubUserInfo(ctx context.Context, accessToken string) (*githubUserInfo, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.github.com/user", nil)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrFetchUserInfo, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthFetchUserInfo, err)
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrFetchUserInfo, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthFetchUserInfo, err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrFetchUserInfo, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthFetchUserInfo, err)
 	}
 
 	var userInfo githubUserInfo
 	if err := json.Unmarshal(body, &userInfo); err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrFetchUserInfo, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthFetchUserInfo, err)
 	}
 	return &userInfo, nil
 }
 
-func (s *service) fetchGitHubEmails(ctx context.Context, accessToken string) ([]githubEmail, error) {
+func (s *oauth2ServiceImpl) fetchGitHubEmails(ctx context.Context, accessToken string) ([]githubEmail, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.github.com/user/emails", nil)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrFetchUserInfo, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthFetchUserInfo, err)
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrFetchUserInfo, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthFetchUserInfo, err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrFetchUserInfo, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthFetchUserInfo, err)
 	}
 
 	var emails []githubEmail
 	if err := json.Unmarshal(body, &emails); err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrFetchUserInfo, err)
+		return nil, fmt.Errorf("%w: %w", ErrOAuthFetchUserInfo, err)
 	}
 	return emails, nil
 }

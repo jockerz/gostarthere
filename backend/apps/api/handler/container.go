@@ -2,8 +2,7 @@ package handler
 
 import (
 	"vnti/internal"
-	"vnti/pkg/auth"
-	"vnti/pkg/user"
+	"vnti/pkg/service"
 
 	"github.com/hibiken/asynq"
 	"gorm.io/gorm"
@@ -17,16 +16,16 @@ type handlerContainer struct {
 	config      *internal.Config
 	DB          *gorm.DB
 	Asynq       *asynq.Client
-	AuthService *auth.Service
-	UserService *user.Service
+	AuthService *service.AuthService
+	UserService *service.UserService
 }
 
 func NewHanderContainer(
 	config *internal.Config,
 	asynqClient *asynq.Client,
 	db *gorm.DB,
-	authService *auth.Service,
-	userService *user.Service,
+	authService *service.AuthService,
+	userService *service.UserService,
 ) HandlerContainer {
 	return &handlerContainer{
 		config: config,
@@ -42,8 +41,8 @@ func NewHanderContainer(
 // 	config *internal.Config,
 // 	asynqClient *asynq.Client,
 // 	db *gorm.DB,
-// 	authService *auth.Service,
-// 	userService *user.Service,
+// 	authService *service.AuthService,
+// 	userService *service.UserService,
 // ) *HandlerContainer {
 // 	return &HandlerContainer{
 // 		config: config,

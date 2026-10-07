@@ -1,4 +1,4 @@
-package user
+package service
 
 import (
 	"context"
@@ -119,11 +119,11 @@ func (m *mockRepo) Delete(_ context.Context, u *entities.User) error {
 
 func TestServiceCreate(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
-	user := &entities.User{Email: "test@test.com", Username: "test", Password: p("secret")}
+	user := &entities.User{Email: "test@test.com", Username: "test", Password: userStringPtr("secret")}
 	created, err := svc.Create(ctx, user)
 	if err != nil {
 		t.Fatal(err)
@@ -138,12 +138,12 @@ func TestServiceCreate(t *testing.T) {
 
 func TestServiceCreateLowercasesEmailAndUsername(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 
 	ctx := context.Background()
 
-	created, err := svc.Create(ctx, &entities.User{Email: "UPPER@TEST.COM", Username: "UserName", Password: p("secret")})
+	created, err := svc.Create(ctx, &entities.User{Email: "UPPER@TEST.COM", Username: "UserName", Password: userStringPtr("secret")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,11 +157,11 @@ func TestServiceCreateLowercasesEmailAndUsername(t *testing.T) {
 
 func TestServiceCreateMissingEmail(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
-	_, err := svc.Create(ctx, &entities.User{Username: "test", Password: p("secret")})
+	_, err := svc.Create(ctx, &entities.User{Username: "test", Password: userStringPtr("secret")})
 	if err == nil {
 		t.Fatal("expected error for missing email")
 	}
@@ -169,11 +169,11 @@ func TestServiceCreateMissingEmail(t *testing.T) {
 
 func TestServiceCreateMissingUsername(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
-	_, err := svc.Create(ctx, &entities.User{Email: "test@test.com", Password: p("secret")})
+	_, err := svc.Create(ctx, &entities.User{Email: "test@test.com", Password: userStringPtr("secret")})
 	if err == nil {
 		t.Fatal("expected error for missing username")
 	}
@@ -181,7 +181,7 @@ func TestServiceCreateMissingUsername(t *testing.T) {
 
 func TestServiceCreateMissingPassword(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
@@ -194,11 +194,11 @@ func TestServiceCreateMissingPassword(t *testing.T) {
 func TestServiceCreateRepoError(t *testing.T) {
 	repo := newMockRepo()
 	repo.createErr = errors.New("db down")
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
-	_, err := svc.Create(ctx, &entities.User{Email: "test@test.com", Username: "test", Password: p("secret")})
+	_, err := svc.Create(ctx, &entities.User{Email: "test@test.com", Username: "test", Password: userStringPtr("secret")})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -206,11 +206,11 @@ func TestServiceCreateRepoError(t *testing.T) {
 
 func TestServiceFindByID(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
-	user, _ := svc.Create(ctx, &entities.User{Email: "test@test.com", Username: "test", Password: p("secret")})
+	user, _ := svc.Create(ctx, &entities.User{Email: "test@test.com", Username: "test", Password: userStringPtr("secret")})
 	found, err := svc.FindByID(ctx, user.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -222,7 +222,7 @@ func TestServiceFindByID(t *testing.T) {
 
 func TestServiceFindByIDNotFound(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
@@ -230,18 +230,18 @@ func TestServiceFindByIDNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, ErrNotFound) {
-		t.Fatalf("expected ErrNotFound, got %v", err)
+	if !errors.Is(err, ErrUserNotFound) {
+		t.Fatalf("expected ErrUserNotFound, got %v", err)
 	}
 }
 
 func TestServiceFindByEmail(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
-	svc.Create(ctx, &entities.User{Email: "find@test.com", Username: "find", Password: p("secret")})
+	svc.Create(ctx, &entities.User{Email: "find@test.com", Username: "find", Password: userStringPtr("secret")})
 	found, err := svc.FindByEmail(ctx, "find@test.com")
 	if err != nil {
 		t.Fatal(err)
@@ -253,7 +253,7 @@ func TestServiceFindByEmail(t *testing.T) {
 
 func TestServiceFindByEmailNotFound(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
@@ -261,18 +261,18 @@ func TestServiceFindByEmailNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, ErrNotFound) {
-		t.Fatalf("expected ErrNotFound, got %v", err)
+	if !errors.Is(err, ErrUserNotFound) {
+		t.Fatalf("expected ErrUserNotFound, got %v", err)
 	}
 }
 
 func TestServiceFindByUsername(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
-	svc.Create(ctx, &entities.User{Email: "user@test.com", Username: "findme", Password: p("secret")})
+	svc.Create(ctx, &entities.User{Email: "user@test.com", Username: "findme", Password: userStringPtr("secret")})
 	found, err := svc.FindByUsername(ctx, "findme")
 	if err != nil {
 		t.Fatal(err)
@@ -284,7 +284,7 @@ func TestServiceFindByUsername(t *testing.T) {
 
 func TestServiceFindByUsernameNotFound(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
@@ -292,18 +292,18 @@ func TestServiceFindByUsernameNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, ErrNotFound) {
-		t.Fatalf("expected ErrNotFound, got %v", err)
+	if !errors.Is(err, ErrUserNotFound) {
+		t.Fatalf("expected ErrUserNotFound, got %v", err)
 	}
 }
 
 func TestServiceUpdate(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
-	user, _ := svc.Create(ctx, &entities.User{Email: "test@test.com", Username: "test", Password: p("secret")})
+	user, _ := svc.Create(ctx, &entities.User{Email: "test@test.com", Username: "test", Password: userStringPtr("secret")})
 	user.Name = "Updated"
 	updated, err := svc.Update(ctx, user)
 	if err != nil {
@@ -316,7 +316,7 @@ func TestServiceUpdate(t *testing.T) {
 
 func TestServiceUpdateNotFound(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
@@ -324,35 +324,35 @@ func TestServiceUpdateNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, ErrNotFound) {
-		t.Fatalf("expected ErrNotFound, got %v", err)
+	if !errors.Is(err, ErrUserNotFound) {
+		t.Fatalf("expected ErrUserNotFound, got %v", err)
 	}
 }
 
 func TestServiceUpdateRepoError(t *testing.T) {
 	repo := newMockRepo()
 	repo.updateErr = errors.New("update failed")
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
-	user, _ := svc.Create(ctx, &entities.User{Email: "test@test.com", Username: "test", Password: p("secret")})
+	user, _ := svc.Create(ctx, &entities.User{Email: "test@test.com", Username: "test", Password: userStringPtr("secret")})
 	_, err := svc.Update(ctx, user)
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, ErrUpdateFailed) {
-		t.Fatalf("expected ErrUpdateFailed, got %v", err)
+	if !errors.Is(err, ErrUserUpdateFailed) {
+		t.Fatalf("expected ErrUserUpdateFailed, got %v", err)
 	}
 }
 
 func TestServiceDelete(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
-	user, _ := svc.Create(ctx, &entities.User{Email: "test@test.com", Username: "test", Password: p("secret")})
+	user, _ := svc.Create(ctx, &entities.User{Email: "test@test.com", Username: "test", Password: userStringPtr("secret")})
 	err := svc.Delete(ctx, user)
 	if err != nil {
 		t.Fatal(err)
@@ -361,7 +361,7 @@ func TestServiceDelete(t *testing.T) {
 
 func TestServiceDeleteNotFound(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
@@ -369,35 +369,35 @@ func TestServiceDeleteNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, ErrNotFound) {
-		t.Fatalf("expected ErrNotFound, got %v", err)
+	if !errors.Is(err, ErrUserNotFound) {
+		t.Fatalf("expected ErrUserNotFound, got %v", err)
 	}
 }
 
 func TestServiceDeleteRepoError(t *testing.T) {
 	repo := newMockRepo()
 	repo.deleteErr = errors.New("delete failed")
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
-	user, _ := svc.Create(ctx, &entities.User{Email: "test@test.com", Username: "test", Password: p("secret")})
+	user, _ := svc.Create(ctx, &entities.User{Email: "test@test.com", Username: "test", Password: userStringPtr("secret")})
 	err := svc.Delete(ctx, user)
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !errors.Is(err, ErrDeleteFailed) {
-		t.Fatalf("expected ErrDeleteFailed, got %v", err)
+	if !errors.Is(err, ErrUserDeleteFailed) {
+		t.Fatalf("expected ErrUserDeleteFailed, got %v", err)
 	}
 }
 
 func TestServiceUpdateProfile(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
-	user, _ := svc.Create(ctx, &entities.User{Email: "test@test.com", Username: "test", Password: p("secret")})
+	user, _ := svc.Create(ctx, &entities.User{Email: "test@test.com", Username: "test", Password: userStringPtr("secret")})
 
 	updated, err := svc.UpdateProfile(ctx, user.ID, "New Name", "newusername", "new-avatar-url")
 	if err != nil {
@@ -416,11 +416,11 @@ func TestServiceUpdateProfile(t *testing.T) {
 
 func TestServiceUpdateProfileEmptyFields(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
-	user, _ := svc.Create(ctx, &entities.User{Email: "test@test.com", Username: "test", Name: "Original", Avatar: "orig.jpg", Password: p("secret")})
+	user, _ := svc.Create(ctx, &entities.User{Email: "test@test.com", Username: "test", Name: "Original", Avatar: "orig.jpg", Password: userStringPtr("secret")})
 
 	updated, err := svc.UpdateProfile(ctx, user.ID, "", "", "")
 	if err != nil {
@@ -436,7 +436,7 @@ func TestServiceUpdateProfileEmptyFields(t *testing.T) {
 
 func TestServiceUpdateProfileNotFound(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
@@ -444,19 +444,19 @@ func TestServiceUpdateProfileNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for non-existent user")
 	}
-	if !errors.Is(err, ErrUpdateFailed) {
-		t.Fatalf("expected ErrUpdateFailed, got %v", err)
+	if !errors.Is(err, ErrUserUpdateFailed) {
+		t.Fatalf("expected ErrUserUpdateFailed, got %v", err)
 	}
 }
 
 func TestServiceChangePasswordSuccess(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
 	hashed, _ := bcrypt.GenerateFromPassword([]byte("oldpass"), bcrypt.DefaultCost)
-	user, _ := svc.Create(ctx, &entities.User{Email: "cpw@test.com", Username: "cpw", Password: p(string(hashed))})
+	user, _ := svc.Create(ctx, &entities.User{Email: "cpw@test.com", Username: "cpw", Password: userStringPtr(string(hashed))})
 
 	err := svc.ChangePassword(ctx, user.ID, "oldpass", "newpass")
 	if err != nil {
@@ -471,24 +471,24 @@ func TestServiceChangePasswordSuccess(t *testing.T) {
 
 func TestServiceChangePasswordWrongCurrent(t *testing.T) {
 	repo := newMockRepo()
-	svc := NewService(&internal.Config{}, repo, nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, repo, nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
 	hashed, _ := bcrypt.GenerateFromPassword([]byte("oldpass"), bcrypt.DefaultCost)
-	user, _ := svc.Create(ctx, &entities.User{Email: "cpw@test.com", Username: "cpw", Password: p(string(hashed))})
+	user, _ := svc.Create(ctx, &entities.User{Email: "cpw@test.com", Username: "cpw", Password: userStringPtr(string(hashed))})
 
 	err := svc.ChangePassword(ctx, user.ID, "wrongpass", "newpass")
 	if err == nil {
 		t.Fatal("expected error for wrong current password")
 	}
-	if !errors.Is(err, ErrInvalidCredentials) {
-		t.Fatalf("expected ErrInvalidCredentials, got %v", err)
+	if !errors.Is(err, ErrUserInvalidCredentials) {
+		t.Fatalf("expected ErrUserInvalidCredentials, got %v", err)
 	}
 }
 
 func TestServiceChangePasswordUserNotFound(t *testing.T) {
-	svc := NewService(&internal.Config{}, newMockRepo(), nil, &asynq.Client{})
+	svc := NewUserService(&internal.Config{}, newMockRepo(), nil, &asynq.Client{})
 	svc.SetSkipTaskQueue(true)
 	ctx := context.Background()
 
@@ -496,8 +496,8 @@ func TestServiceChangePasswordUserNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for non-existent user")
 	}
-	if !errors.Is(err, ErrInvalidCredentials) {
-		t.Fatalf("expected ErrInvalidCredentials, got %v", err)
+	if !errors.Is(err, ErrUserInvalidCredentials) {
+		t.Fatalf("expected ErrUserInvalidCredentials, got %v", err)
 	}
 }
-func p(s string) *string { return &s }
+func userStringPtr(s string) *string { return &s }

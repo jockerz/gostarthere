@@ -1,4 +1,4 @@
-package auth
+package service
 
 import (
 	"context"
@@ -10,8 +10,8 @@ import (
 	"vnti/internal"
 	"vnti/internal/logger"
 	"vnti/pkg/entities"
+	"vnti/pkg/repository"
 	"vnti/pkg/tasks"
-	"vnti/pkg/user"
 
 	"github.com/gofiber/utils/v2"
 	"github.com/golang-jwt/jwt/v5"
@@ -21,28 +21,28 @@ import (
 )
 
 var (
-	ErrInvalidCredentials     = errors.New("invalid credentials")
-	ErrInvalidToken           = errors.New("invalid or expired token")
-	ErrUsedToken              = errors.New("token has been used")
-	ErrEmailAlreadyExists     = errors.New("email already exists")
-	ErrUsernameAlreadyExists  = errors.New("username already exists")
-	ErrCreateTokenFailed      = errors.New("create auth token failed")
-	ErrUserActivationFailed   = errors.New("user activation failed")
-	ErrResendActivationFailed = errors.New("user activation reset failed")
-	ErrInvalidRefreshToken    = errors.New("invalid or expired token")
-	ErrRefreshTokenExpired    = errors.New("reset token expired")
-	ErrUserNotFound           = errors.New("user not found")
+	ErrAuthInvalidCredentials     = errors.New("invalid credentials")
+	ErrAuthInvalidToken           = errors.New("invalid or expired token")
+	ErrAuthUsedToken              = errors.New("token has been used")
+	ErrAuthEmailAlreadyExists     = errors.New("email already exists")
+	ErrAuthUsernameAlreadyExists  = errors.New("username already exists")
+	ErrAuthCreateTokenFailed      = errors.New("create auth token failed")
+	ErrAuthUserActivationFailed   = errors.New("user activation failed")
+	ErrAuthResendActivationFailed = errors.New("user activation reset failed")
+	ErrAuthInvalidRefreshToken    = errors.New("invalid or expired token")
+	ErrAuthRefreshTokenExpired    = errors.New("reset token expired")
+	ErrAuthUserNotFound           = errors.New("user not found")
 )
 
-type TokenAction string
+type AuthTokenAction string
 
 const (
-	TokenActionActivation      TokenAction = "activation"
-	TokenActionResetActivation TokenAction = "reset_activation"
-	TokenActionResetPassword   TokenAction = "reset_password"
+	TokenActionActivation      AuthTokenAction = "activation"
+	TokenActionResetActivation AuthTokenAction = "reset_activation"
+	TokenActionResetPassword   AuthTokenAction = "reset_password"
 )
 
-type Service interface {
+type AuthService interface {
 	Login(ctx context.Context, email, password string) (*entities.User, *entities.BearerToken, error)
 	Register(context.Context, *entities.Register) (*entities.User, error)
 
@@ -85,29 +85,29 @@ type Service interface {
 	  }
 */
 
-type Claims struct {
+type AuthClaims struct {
 	UserID uint `json:"user_id"`
 	jwt.RegisteredClaims
 }
 
-type service struct {
+type authServiceImpl struct {
 	config    *internal.Config
-	userRepo  user.Repository
-	repo      Repository
+	userRepo  repository.UserRepository
+	repo      repository.AuthRepository
 	jwtSecret string
 
 	asynqClient   *asynq.Client
 	skipTaskQueue bool
 }
 
-func NewService(
+func NewAuthService(
 	config *internal.Config,
-	userRepo user.Repository,
-	repo Repository,
+	userRepo repository.UserRepository,
+	repo repository.AuthRepository,
 	jwtSecret string,
 	asynqClient *asynq.Client,
-) Service {
-	return &service{
+) AuthService {
+	return &authServiceImpl{
 		config:      config,
 		userRepo:    userRepo,
 		repo:        repo,
@@ -116,7 +116,7 @@ func NewService(
 	}
 }
 
-func (s *service) GenerateUserToken(ctx context.Context, user_id uint, token_type entities.UserTokenType) (*entities.UserToken, error) {
+func (s *authServiceImpl) GenerateUserToken(ctx context.Context, user_id uint, token_type entities.UserTokenType) (*entities.UserToken, error) {
 	prefix := utils.GenerateSecureToken(30)
 	// Generate random secret
 	secret := utils.GenerateSecureToken(40)
@@ -136,23 +136,23 @@ func (s *service) GenerateUserToken(ctx context.Context, user_id uint, token_typ
 	to_save_token := token
 	hashed_secret, err := bcrypt.GenerateFromPassword([]byte(to_save_token.Secret), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, ErrCreateTokenFailed
+		return nil, ErrAuthCreateTokenFailed
 	}
 	to_save_token.Secret = string(hashed_secret)
 	hashed_refresh_secret, err := bcrypt.GenerateFromPassword([]byte(to_save_token.RefreshSecret), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, ErrCreateTokenFailed
+		return nil, ErrAuthCreateTokenFailed
 	}
 	to_save_token.RefreshSecret = string(hashed_refresh_secret)
 
 	_, err = s.repo.CreateUserToken(ctx, &to_save_token)
 	if err != nil {
-		return nil, ErrCreateTokenFailed
+		return nil, ErrAuthCreateTokenFailed
 	}
 	return &token, nil
 }
 
-func (s *service) GenerateAuthToken(ctx context.Context, user *entities.User) (*entities.AuthToken, error) {
+func (s *authServiceImpl) GenerateAuthToken(ctx context.Context, user *entities.User) (*entities.AuthToken, error) {
 	prefix := utils.GenerateSecureToken(TOKEN_PREFIX_LENGTH)
 	secret := utils.GenerateSecureToken(ACCESS_SECRET_LENGTH)
 	refresh_secret := utils.GenerateSecureToken(REFRESH_SECRET_LENGTH)
@@ -169,18 +169,18 @@ func (s *service) GenerateAuthToken(ctx context.Context, user *entities.User) (*
 	to_save_token := token
 	hashed_secret, err := bcrypt.GenerateFromPassword([]byte(to_save_token.Secret), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, ErrCreateTokenFailed
+		return nil, ErrAuthCreateTokenFailed
 	}
 	to_save_token.Secret = string(hashed_secret)
 	hashed_refresh_secret, err := bcrypt.GenerateFromPassword([]byte(to_save_token.RefreshSecret), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, ErrCreateTokenFailed
+		return nil, ErrAuthCreateTokenFailed
 	}
 	to_save_token.RefreshSecret = string(hashed_refresh_secret)
 
 	_, err = s.repo.CreateAuthToken(ctx, &to_save_token)
 	if err != nil {
-		return nil, ErrCreateTokenFailed
+		return nil, ErrAuthCreateTokenFailed
 	}
 
 	l := logger.LogContext(ctx, "auth:service:GenAuthToken", "AuthToken created")
@@ -189,7 +189,7 @@ func (s *service) GenerateAuthToken(ctx context.Context, user *entities.User) (*
 	return &token, nil
 }
 
-func (s *service) Login(ctx context.Context, email_or_username, password string) (*entities.User, *entities.BearerToken, error) {
+func (s *authServiceImpl) Login(ctx context.Context, email_or_username, password string) (*entities.User, *entities.BearerToken, error) {
 	l := logger.LogContext(ctx, "auth:service:Login", "AuthToken created")
 	l.Info().Str("config", string(s.config.ToJSON()))
 	var user *entities.User
@@ -203,12 +203,12 @@ func (s *service) Login(ctx context.Context, email_or_username, password string)
 	log := logger.LogContext(ctx, "auth:service:Login", "login")
 	if err != nil {
 		log.Debug().Str("username/email", email_or_username).Msg("Invalid email or username")
-		return nil, nil, ErrInvalidCredentials
+		return nil, nil, ErrAuthInvalidCredentials
 	}
 
 	if user.Password == nil || !s.checkTokenSecret(*user.Password, password) {
 		log.Debug().Str("username/email", email_or_username).Msg("Invalid password")
-		return nil, nil, ErrInvalidCredentials
+		return nil, nil, ErrAuthInvalidCredentials
 	}
 
 	auth_token, err := s.GenerateAuthToken(ctx, user)
@@ -221,19 +221,19 @@ func (s *service) Login(ctx context.Context, email_or_username, password string)
 	return user, &bearer_token, nil
 }
 
-func (s *service) Register(ctx context.Context, input *entities.Register) (*entities.User, error) {
+func (s *authServiceImpl) Register(ctx context.Context, input *entities.Register) (*entities.User, error) {
 	if input.Password != input.PasswordValidate {
 		return nil, errors.New("passwords do not match")
 	}
 
 	existing, _ := s.userRepo.FindByEmail(ctx, input.Email)
 	if existing != nil {
-		return nil, ErrEmailAlreadyExists
+		return nil, ErrAuthEmailAlreadyExists
 	}
 
 	existing, _ = s.userRepo.FindByUsername(ctx, input.Username)
 	if existing != nil {
-		return nil, ErrUsernameAlreadyExists
+		return nil, ErrAuthUsernameAlreadyExists
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
@@ -274,27 +274,27 @@ func (s *service) Register(ctx context.Context, input *entities.Register) (*enti
 	return user, nil
 }
 
-func (s *service) ActivateAccount(ctx context.Context, tokenStr string) error {
+func (s *authServiceImpl) ActivateAccount(ctx context.Context, tokenStr string) error {
 	tokenParts, err := s.splitToken(tokenStr)
 	if err != nil {
-		return ErrInvalidToken
+		return ErrAuthInvalidToken
 	}
 
 	token, err := s.repo.FindUserToken(ctx, tokenParts[0], entities.TokenActivation)
 	if err != nil {
-		return ErrInvalidToken
+		return ErrAuthInvalidToken
 	} else if token.IsUsed {
-		return ErrUsedToken
+		return ErrAuthUsedToken
 	} else if token.ExpiresAt.Before(time.Now()) {
-		return ErrInvalidToken
+		return ErrAuthInvalidToken
 	} else if !s.checkTokenSecret(token.Secret, tokenParts[1]) {
-		return ErrInvalidToken
+		return ErrAuthInvalidToken
 	}
 
 	user, err := s.userRepo.FindByID(ctx, token.UserID)
 	if err != nil {
 		// TODO: log, because token is found but the user is not
-		return ErrInvalidToken
+		return ErrAuthInvalidToken
 	}
 
 	user.Active = true
@@ -302,14 +302,14 @@ func (s *service) ActivateAccount(ctx context.Context, tokenStr string) error {
 	err = s.userRepo.UpdateByID(ctx, user.ID, map[string]any{"active": true}, user.ID)
 	if err != nil {
 		// TODO: log error
-		return ErrUserActivationFailed
+		return ErrAuthUserActivationFailed
 	}
 
 	_ = s.repo.MarkAsUsedUserToken(ctx, token.ID)
 	return nil
 }
 
-func (s *service) ResendActivation(ctx context.Context, email_or_username string) error {
+func (s *authServiceImpl) ResendActivation(ctx context.Context, email_or_username string) error {
 	var err error
 	var user *entities.User
 
@@ -320,13 +320,13 @@ func (s *service) ResendActivation(ctx context.Context, email_or_username string
 	}
 	if err != nil {
 		// TODO: log because, token found with invalid user
-		return ErrUserNotFound
+		return ErrAuthUserNotFound
 	}
 
 	token, err := s.GenerateUserToken(ctx, user.ID, entities.TokenActivation)
 	if err != nil {
 		// TODO: error
-		return ErrResendActivationFailed
+		return ErrAuthResendActivationFailed
 	}
 
 	// sent email task
@@ -342,7 +342,7 @@ func (s *service) ResendActivation(ctx context.Context, email_or_username string
 	return nil
 }
 
-func (s *service) ForgotPassword(ctx context.Context, email_or_username string) error {
+func (s *authServiceImpl) ForgotPassword(ctx context.Context, email_or_username string) error {
 	var user *entities.User
 	var err error
 
@@ -373,27 +373,27 @@ func (s *service) ForgotPassword(ctx context.Context, email_or_username string) 
 	return nil
 }
 
-func (s *service) ResetPassword(ctx context.Context, tokenStr, newPassword string) error {
+func (s *authServiceImpl) ResetPassword(ctx context.Context, tokenStr, newPassword string) error {
 	tokenParts, err := s.splitToken(tokenStr)
 	if err != nil {
-		return ErrInvalidToken
+		return ErrAuthInvalidToken
 	}
 
 	token, err := s.repo.FindUserToken(ctx, tokenParts[0], entities.TokenReset)
 	if err != nil {
-		return ErrInvalidToken
+		return ErrAuthInvalidToken
 	} else if token.IsUsed {
-		return ErrUsedToken
+		return ErrAuthUsedToken
 	} else if token.ExpiresAt.Before(time.Now()) {
-		return ErrInvalidToken
+		return ErrAuthInvalidToken
 	} else if !s.checkTokenSecret(token.Secret, tokenParts[1]) {
-		return ErrInvalidToken
+		return ErrAuthInvalidToken
 	}
 
 	user, err := s.userRepo.FindByID(ctx, token.UserID)
 	if err != nil {
 		// TODO: log, because token is found but the user is not
-		return ErrInvalidToken
+		return ErrAuthInvalidToken
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
@@ -420,19 +420,19 @@ func (s *service) ResetPassword(ctx context.Context, tokenStr, newPassword strin
 	return nil
 }
 
-func (s *service) Logout(ctx context.Context, tokenStr string) error {
+func (s *authServiceImpl) Logout(ctx context.Context, tokenStr string) error {
 	tokenParts, err := s.splitToken(tokenStr)
 	if err != nil {
-		return ErrInvalidToken
+		return ErrAuthInvalidToken
 	}
 
 	token, err := s.repo.FindAuthToken(ctx, tokenParts[0])
 	if err != nil {
-		return ErrInvalidToken
+		return ErrAuthInvalidToken
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(token.Secret), []byte(tokenParts[1])); err != nil {
-		return ErrInvalidToken
+		return ErrAuthInvalidToken
 	}
 
 	l := logger.LogContext(ctx, "auth:service:Logout", "logout")
@@ -441,27 +441,27 @@ func (s *service) Logout(ctx context.Context, tokenStr string) error {
 	return s.repo.RevokeAuthToken(ctx, token.Prefix)
 }
 
-func (s *service) RefreshToken(ctx context.Context, refreshTokenStr string) (*entities.BearerToken, error) {
+func (s *authServiceImpl) RefreshToken(ctx context.Context, refreshTokenStr string) (*entities.BearerToken, error) {
 	tokenParts, err := s.splitToken(refreshTokenStr)
 	if err != nil {
-		return nil, ErrInvalidToken
+		return nil, ErrAuthInvalidToken
 	}
 
 	token, err := s.repo.FindAuthToken(ctx, tokenParts[0])
 	if err != nil {
-		return nil, ErrInvalidToken
+		return nil, ErrAuthInvalidToken
 	}
 
 	if token.IsRevoked {
-		return nil, ErrInvalidToken
+		return nil, ErrAuthInvalidToken
 	}
 
 	if token.RefreshExpiresAt.Before(time.Now()) {
-		return nil, ErrRefreshTokenExpired
+		return nil, ErrAuthRefreshTokenExpired
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(token.RefreshSecret), []byte(tokenParts[1])); err != nil {
-		return nil, ErrInvalidToken
+		return nil, ErrAuthInvalidToken
 	}
 
 	newSecret := utils.GenerateSecureToken(ACCESS_SECRET_LENGTH)
@@ -477,58 +477,58 @@ func (s *service) RefreshToken(ctx context.Context, refreshTokenStr string) (*en
 	toSaveToken := newToken
 	hashedSecret, err := bcrypt.GenerateFromPassword([]byte(toSaveToken.Secret), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, ErrCreateTokenFailed
+		return nil, ErrAuthCreateTokenFailed
 	}
 	toSaveToken.Secret = string(hashedSecret)
 	hashedRefreshSecret, err := bcrypt.GenerateFromPassword([]byte(toSaveToken.RefreshSecret), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, ErrCreateTokenFailed
+		return nil, ErrAuthCreateTokenFailed
 	}
 	toSaveToken.RefreshSecret = string(hashedRefreshSecret)
 
 	if err := s.repo.RefreshAuthToken(ctx, &toSaveToken); err != nil {
-		return nil, ErrCreateTokenFailed
+		return nil, ErrAuthCreateTokenFailed
 	}
 
 	bearer := newToken.ToBearerToken(s.jwtSecret)
 	return &bearer, nil
 }
 
-func (s *service) GetAuthTokenByJWTToken(ctx context.Context, tokenStr string) (*entities.AuthToken, error) {
+func (s *authServiceImpl) GetAuthTokenByJWTToken(ctx context.Context, tokenStr string) (*entities.AuthToken, error) {
 	tokenParts, err := s.splitToken(tokenStr)
 	if err != nil {
-		return nil, ErrInvalidToken
+		return nil, ErrAuthInvalidToken
 	}
 
 	token, err := s.repo.FindAuthToken(ctx, tokenParts[0])
 	if err != nil {
-		return nil, ErrInvalidToken
+		return nil, ErrAuthInvalidToken
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(token.Secret), []byte(tokenParts[1])); err != nil {
-		return nil, ErrInvalidToken
+		return nil, ErrAuthInvalidToken
 	}
 	return token, nil
 }
 
-func (s *service) GetAuthTokenByJWTRefreshToken(ctx context.Context, tokenStr string) (*entities.AuthToken, error) {
+func (s *authServiceImpl) GetAuthTokenByJWTRefreshToken(ctx context.Context, tokenStr string) (*entities.AuthToken, error) {
 	tokenParts, err := s.splitToken(tokenStr)
 	if err != nil {
-		return nil, ErrInvalidRefreshToken
+		return nil, ErrAuthInvalidRefreshToken
 	}
 
 	token, err := s.repo.FindAuthToken(ctx, tokenParts[0])
 	if err != nil {
-		return nil, ErrInvalidRefreshToken
+		return nil, ErrAuthInvalidRefreshToken
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(token.RefreshSecret), []byte(tokenParts[1])); err != nil {
-		return nil, ErrInvalidRefreshToken
+		return nil, ErrAuthInvalidRefreshToken
 	}
 	return token, nil
 }
 
-func (s *service) AuthByToken(ctx context.Context, tokenStr string) (*entities.User, error) {
+func (s *authServiceImpl) AuthByToken(ctx context.Context, tokenStr string) (*entities.User, error) {
 	token, err := s.GetAuthTokenByJWTToken(ctx, tokenStr)
 	if err != nil {
 		return nil, err
@@ -542,7 +542,7 @@ func (s *service) AuthByToken(ctx context.Context, tokenStr string) (*entities.U
 	return user, nil
 }
 
-func (s *service) AuthByRefreshToken(ctx context.Context, tokenStr string) (*entities.User, error) {
+func (s *authServiceImpl) AuthByRefreshToken(ctx context.Context, tokenStr string) (*entities.User, error) {
 	token, err := s.GetAuthTokenByJWTRefreshToken(ctx, tokenStr)
 	if err != nil {
 		return nil, err
@@ -556,7 +556,7 @@ func (s *service) AuthByRefreshToken(ctx context.Context, tokenStr string) (*ent
 	return user, nil
 }
 
-func (s *service) splitToken(tokenStr string) ([]string, error) {
+func (s *authServiceImpl) splitToken(tokenStr string) ([]string, error) {
 	parts := strings.Split(tokenStr, ".")
 	if len(parts) != 2 {
 		return nil, errors.New("Invalid token")
@@ -564,18 +564,18 @@ func (s *service) splitToken(tokenStr string) ([]string, error) {
 	return parts, nil
 }
 
-func (s *service) toBearerToken(authToken *entities.AuthToken) entities.BearerToken {
+func (s *authServiceImpl) toBearerToken(authToken *entities.AuthToken) entities.BearerToken {
 	return authToken.ToBearerToken(s.jwtSecret)
 }
 
-func (s *service) checkTokenSecret(hashed, plain string) bool {
+func (s *authServiceImpl) checkTokenSecret(hashed, plain string) bool {
 	if err := bcrypt.CompareHashAndPassword([]byte(hashed), []byte(plain)); err != nil {
 		return false
 	}
 	return true
 }
 
-func (s *service) sendTokenEmail(ctx context.Context, actionType TokenAction, tokenWithSecret, email string) error {
+func (s *authServiceImpl) sendTokenEmail(ctx context.Context, actionType AuthTokenAction, tokenWithSecret, email string) error {
 	var url, message, subject string
 
 	switch actionType {
@@ -616,7 +616,7 @@ func (s *service) sendTokenEmail(ctx context.Context, actionType TokenAction, to
 
 }
 
-func (s *service) EnqueueTask(task *asynq.Task, taskType TokenAction) error {
+func (s *authServiceImpl) EnqueueTask(task *asynq.Task, taskType AuthTokenAction) error {
 	taskInfo, err := s.asynqClient.Enqueue(task)
 	log.Debug().Any("task_info", taskInfo).Err(err).Send()
 	if err != nil {
@@ -628,6 +628,6 @@ func (s *service) EnqueueTask(task *asynq.Task, taskType TokenAction) error {
 }
 
 // For testing purposes only
-func (s *service) SetSkipTaskQueue(v bool) {
+func (s *authServiceImpl) SetSkipTaskQueue(v bool) {
 	s.skipTaskQueue = v
 }

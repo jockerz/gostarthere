@@ -1,4 +1,4 @@
-package user
+package repository
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+func userStringPtr(s string) *string { return &s }
 
 func setupTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
@@ -22,14 +24,14 @@ func setupTestDB(t *testing.T) *gorm.DB {
 
 func TestRepositoryCreate(t *testing.T) {
 	db := setupTestDB(t)
-	repo := NewRepository(db)
+	repo := NewUserRepository(db)
 	ctx := context.Background()
 
 	user := &entities.User{
 		Email:    "test@example.com",
 		Username: "testuser",
 		Name:     "Test",
-		Password: p("hashed"),
+		Password: userStringPtr("hashed"),
 		Active:   false,
 	}
 
@@ -47,12 +49,12 @@ func TestRepositoryCreate(t *testing.T) {
 
 func TestRepositoryCreateDuplicateEmail(t *testing.T) {
 	db := setupTestDB(t)
-	repo := NewRepository(db)
+	repo := NewUserRepository(db)
 	ctx := context.Background()
 
-	repo.Create(ctx, &entities.User{Email: "dup@test.com", Username: "first", Password: p("hash")})
+	repo.Create(ctx, &entities.User{Email: "dup@test.com", Username: "first", Password: userStringPtr("hash")})
 
-	_, err := repo.Create(ctx, &entities.User{Email: "dup@test.com", Username: "second", Password: p("hash")})
+	_, err := repo.Create(ctx, &entities.User{Email: "dup@test.com", Username: "second", Password: userStringPtr("hash")})
 	if err == nil {
 		t.Fatal("expected error for duplicate email")
 	}
@@ -60,12 +62,12 @@ func TestRepositoryCreateDuplicateEmail(t *testing.T) {
 
 func TestRepositoryCreateDuplicateUsername(t *testing.T) {
 	db := setupTestDB(t)
-	repo := NewRepository(db)
+	repo := NewUserRepository(db)
 	ctx := context.Background()
 
-	repo.Create(ctx, &entities.User{Email: "first@test.com", Username: "dupuser", Password: p("hash")})
+	repo.Create(ctx, &entities.User{Email: "first@test.com", Username: "dupuser", Password: userStringPtr("hash")})
 
-	_, err := repo.Create(ctx, &entities.User{Email: "second@test.com", Username: "dupuser", Password: p("hash")})
+	_, err := repo.Create(ctx, &entities.User{Email: "second@test.com", Username: "dupuser", Password: userStringPtr("hash")})
 	if err == nil {
 		t.Fatal("expected error for duplicate username")
 	}
@@ -73,10 +75,10 @@ func TestRepositoryCreateDuplicateUsername(t *testing.T) {
 
 func TestRepositoryFindByEmail(t *testing.T) {
 	db := setupTestDB(t)
-	repo := NewRepository(db)
+	repo := NewUserRepository(db)
 	ctx := context.Background()
 
-	repo.Create(ctx, &entities.User{Email: "findme@example.com", Username: "findme", Password: p("hashed")})
+	repo.Create(ctx, &entities.User{Email: "findme@example.com", Username: "findme", Password: userStringPtr("hashed")})
 
 	found, err := repo.FindByEmail(ctx, "findme@example.com")
 	if err != nil {
@@ -89,10 +91,10 @@ func TestRepositoryFindByEmail(t *testing.T) {
 
 func TestRepositoryFindByEmailUpperLowerCase(t *testing.T) {
 	db := setupTestDB(t)
-	repo := NewRepository(db)
+	repo := NewUserRepository(db)
 	ctx := context.Background()
 
-	repo.Create(ctx, &entities.User{Email: "findme@example.com", Username: "findme", Password: p("hashed")})
+	repo.Create(ctx, &entities.User{Email: "findme@example.com", Username: "findme", Password: userStringPtr("hashed")})
 
 	found, err := repo.FindByEmail(ctx, "FindMe@example.com")
 	if err != nil {
@@ -105,7 +107,7 @@ func TestRepositoryFindByEmailUpperLowerCase(t *testing.T) {
 
 func TestRepositoryFindByEmailNotFound(t *testing.T) {
 	db := setupTestDB(t)
-	repo := NewRepository(db)
+	repo := NewUserRepository(db)
 	ctx := context.Background()
 
 	_, err := repo.FindByEmail(ctx, "nobody@example.com")
@@ -116,10 +118,10 @@ func TestRepositoryFindByEmailNotFound(t *testing.T) {
 
 func TestRepositoryFindByID(t *testing.T) {
 	db := setupTestDB(t)
-	repo := NewRepository(db)
+	repo := NewUserRepository(db)
 	ctx := context.Background()
 
-	created, _ := repo.Create(ctx, &entities.User{Email: "id@test.com", Username: "id", Password: p("hashed")})
+	created, _ := repo.Create(ctx, &entities.User{Email: "id@test.com", Username: "id", Password: userStringPtr("hashed")})
 
 	found, err := repo.FindByID(ctx, created.ID)
 	if err != nil {
@@ -132,7 +134,7 @@ func TestRepositoryFindByID(t *testing.T) {
 
 func TestRepositoryFindByIDNotFound(t *testing.T) {
 	db := setupTestDB(t)
-	repo := NewRepository(db)
+	repo := NewUserRepository(db)
 	ctx := context.Background()
 
 	_, err := repo.FindByID(ctx, 999)
@@ -143,10 +145,10 @@ func TestRepositoryFindByIDNotFound(t *testing.T) {
 
 func TestRepositoryFindByUsername(t *testing.T) {
 	db := setupTestDB(t)
-	repo := NewRepository(db)
+	repo := NewUserRepository(db)
 	ctx := context.Background()
 
-	repo.Create(ctx, &entities.User{Email: "user@test.com", Username: "uniqueuser", Password: p("hash")})
+	repo.Create(ctx, &entities.User{Email: "user@test.com", Username: "uniqueuser", Password: userStringPtr("hash")})
 
 	found, err := repo.FindByUsername(ctx, "uniqueuser")
 	if err != nil {
@@ -159,7 +161,7 @@ func TestRepositoryFindByUsername(t *testing.T) {
 
 func TestRepositoryFindByUsernameNotFound(t *testing.T) {
 	db := setupTestDB(t)
-	repo := NewRepository(db)
+	repo := NewUserRepository(db)
 	ctx := context.Background()
 
 	_, err := repo.FindByUsername(ctx, "nobody")
@@ -170,10 +172,10 @@ func TestRepositoryFindByUsernameNotFound(t *testing.T) {
 
 func TestRepositoryUpdate(t *testing.T) {
 	db := setupTestDB(t)
-	repo := NewRepository(db)
+	repo := NewUserRepository(db)
 	ctx := context.Background()
 
-	created, _ := repo.Create(ctx, &entities.User{Email: "update@test.com", Username: "update", Name: "Old", Password: p("p")})
+	created, _ := repo.Create(ctx, &entities.User{Email: "update@test.com", Username: "update", Name: "Old", Password: userStringPtr("userStringPtr")})
 
 	created.Name = "New"
 	updated, err := repo.Update(ctx, created)
@@ -192,10 +194,10 @@ func TestRepositoryUpdate(t *testing.T) {
 
 func TestRepositoryDelete(t *testing.T) {
 	db := setupTestDB(t)
-	repo := NewRepository(db)
+	repo := NewUserRepository(db)
 	ctx := context.Background()
 
-	created, _ := repo.Create(ctx, &entities.User{Email: "delete@test.com", Username: "del", Password: p("p")})
+	created, _ := repo.Create(ctx, &entities.User{Email: "delete@test.com", Username: "del", Password: userStringPtr("userStringPtr")})
 
 	err := repo.Delete(ctx, created)
 	if err != nil {

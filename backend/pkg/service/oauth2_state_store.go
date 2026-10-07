@@ -1,4 +1,4 @@
-package oauth2
+package service
 
 import (
 	"crypto/rand"
@@ -7,27 +7,27 @@ import (
 	"time"
 )
 
-type StateEntry struct {
+type OAuthStateEntry struct {
 	Provider      string
 	UserID        *uint
 	PKCEChallenge string
 	ExpiresAt     time.Time
 }
 
-type StateStore struct {
+type OAuthStateStore struct {
 	mu    sync.RWMutex
-	store map[string]*StateEntry
+	store map[string]*OAuthStateEntry
 }
 
-func NewStateStore() *StateStore {
-	s := &StateStore{
-		store: make(map[string]*StateEntry),
+func NewOAuthStateStore() *OAuthStateStore {
+	s := &OAuthStateStore{
+		store: make(map[string]*OAuthStateEntry),
 	}
 	go s.cleanupLoop()
 	return s
 }
 
-func (s *StateStore) cleanupLoop() {
+func (s *OAuthStateStore) cleanupLoop() {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 	for range ticker.C {
@@ -42,7 +42,7 @@ func (s *StateStore) cleanupLoop() {
 	}
 }
 
-func (s *StateStore) Generate(provider string, userID *uint, codeVerifier string) string {
+func (s *OAuthStateStore) Generate(provider string, userID *uint, codeVerifier string) string {
 	b := make([]byte, 32)
 	_, err := rand.Read(b)
 	if err != nil {
@@ -50,7 +50,7 @@ func (s *StateStore) Generate(provider string, userID *uint, codeVerifier string
 	}
 	state := hex.EncodeToString(b)
 	s.mu.Lock()
-	s.store[state] = &StateEntry{
+	s.store[state] = &OAuthStateEntry{
 		Provider:      provider,
 		UserID:        userID,
 		PKCEChallenge: codeVerifier,
@@ -60,7 +60,7 @@ func (s *StateStore) Generate(provider string, userID *uint, codeVerifier string
 	return state
 }
 
-func (s *StateStore) Consume(state string) *StateEntry {
+func (s *OAuthStateStore) Consume(state string) *OAuthStateEntry {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	entry, ok := s.store[state]
