@@ -65,13 +65,13 @@ gostarthere/
 Layers are strictly separated. Dependencies flow inward only:
 
 ```
-apps/api/handler → pkg/<feature>/service → pkg/entities
-                   pkg/<feature>/repository → extensions/database
+apps/api/handler → pkg/service → pkg/entities
+                   pkg/repository → extensions/database
 ```
 
 **Import rules (never violate):**
 - `pkg/` must never import `apps/*`, Fiber, or Huma
-- `pkg/entities` must never import `apps/*` or `pkg/<feature>/*`
+- `pkg/entities` must never import `pkg/repository` and `pkg/service`
 - `apps/api/presenter` and `apps/api/schema` must never import GORM
 - `apps/api/routes` must never import `pkg/entities` or GORM
 
@@ -82,8 +82,8 @@ apps/api/handler → pkg/<feature>/service → pkg/entities
 **Feature generation order:**
 1. `pkg/entities/` — domain models
 2. `apps/api/presenter/` — request/response DTOs
-3. `pkg/<feature>/repository.go` — data access
-4. `pkg/<feature>/service.go` — business logic
+3. `pkg/repository.go` — data access
+4. `pkg/service.go` — business logic
 5. `apps/api/handler/` — HTTP handlers
 6. `apps/api/schema/` — Huma operation definitions
 7. `apps/api/routes/` — route registration

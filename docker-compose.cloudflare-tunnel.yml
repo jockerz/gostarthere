@@ -1,0 +1,27 @@
+services:
+  traefik:
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entryPoints.web.address=:80
+      - --entryPoints.websecure.address=:443
+      - --certificatesResolvers.letsencrypt.acme.httpChallenge.entryPoint=web
+      - --certificatesResolvers.letsencrypt.acme.email=${ACME_EMAIL:?Set ACME_EMAIL in .env}
+      - --certificatesResolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "${HTTP_PORT}:80"
+      - "${HTTPS_PORT}:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certs:/letsencrypt
+      # - ./letsencrypt:/letsencrypt
+    restart: always
+
+  backend:
+    labels:
+      - traefik.http.routers.api.tls.certresolver=cloudflare
+
+  frontend:
+    labels:
+      - traefik.http.routers.api.tls.certresolver=cloudflare
