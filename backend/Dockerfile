@@ -8,7 +8,6 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-# COPY .env .
 RUN CGO_ENABLED=1 go build -o main main.go
 
 # -----------------------------------------------------
@@ -22,6 +21,7 @@ WORKDIR /app
 
 COPY --from=builder /app/main .
 COPY entrypoint.sh .
+COPY .env .
 RUN chmod +x entrypoint.sh \
     && mkdir -p /app/media/avatar \
     && chown -R appuser:appgroup /app

@@ -7,6 +7,7 @@ services:
       - --entryPoints.web.address=:80
       - --entryPoints.websecure.address=:443
       - --certificatesResolvers.letsencrypt.acme.httpChallenge.entryPoint=web
+      # - --certificatesResolvers.letsencrypt.acme.dnsChallenge.provider=cloudflare
       - --certificatesResolvers.letsencrypt.acme.email=${ACME_EMAIL:?Set ACME_EMAIL in .env}
       - --certificatesResolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
     ports:
@@ -20,8 +21,8 @@ services:
 
   backend:
     labels:
-      - traefik.http.routers.api.tls.certresolver=cloudflare
+      - traefik.http.routers.backend.tls.certresolver=cloudflare
 
   frontend:
     labels:
-      - traefik.http.routers.api.tls.certresolver=cloudflare
+      - traefik.http.routers.frontend.tls.certresolver=cloudflare
